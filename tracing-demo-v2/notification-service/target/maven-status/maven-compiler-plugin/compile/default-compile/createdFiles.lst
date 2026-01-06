@@ -1,3 +1,4 @@
 com/example/tracing/notification/Order.class
+com/example/tracing/notification/RabbitMqConfig.class
 com/example/tracing/notification/NotificationServiceApplication.class
 com/example/tracing/notification/NotificationListener.class

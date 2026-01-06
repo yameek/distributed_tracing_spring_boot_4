@@ -1,5 +1,7 @@
+com/example/tracing/order/TraceIdFilter.class
 com/example/tracing/order/OrderServiceApplication.class
 com/example/tracing/order/OrderPublisher.class
+com/example/tracing/order/RabbitMqConfig.class
 com/example/tracing/order/CreateOrderRequest.class
 com/example/tracing/order/OrderController.class
 com/example/tracing/order/OrderEntity.class

@@ -33,6 +33,8 @@ services:
     image: grafana/grafana:latest
     volumes:
       - ./config/datasources.yaml:/etc/grafana/provisioning/datasources/datasources.yaml
+      - ./config/dashboard-provider.yaml:/etc/grafana/provisioning/dashboards/dashboard-provider.yaml
+      - ./config/dashboards:/etc/grafana/provisioning/dashboards
     environment:
       - GF_AUTH_ANONYMOUS_ENABLED=true
       - GF_AUTH_ANONYMOUS_ORG_ROLE=Admin

@@ -10,6 +10,7 @@ server:
 
 management:
   tracing:
+    enabled: true
     sampling:
       probability: 1.0 # Sample 100% of requests for demo
   otlp:
@@ -22,4 +23,7 @@ management:
 
 logging:
   pattern:
-    level: "%5p [${spring.application.name:},%X{traceId:-},%X{spanId:-}]"
+    correlation:
+      enabled: true
+
+# Logging configuration is in logback-spring.xml for JSON format with trace IDs

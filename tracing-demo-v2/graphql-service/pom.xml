@@ -79,6 +79,11 @@
 			<artifactId>loki-logback-appender</artifactId>
 			<version>1.4.2</version>
 		</dependency>
+		<dependency>
+			<groupId>net.logstash.logback</groupId>
+			<artifactId>logstash-logback-encoder</artifactId>
+			<version>8.0</version>
+		</dependency>
 
 		<dependency>
 			<groupId>org.projectlombok</groupId>
