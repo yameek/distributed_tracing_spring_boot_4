@@ -1,0 +1,13 @@
+type Query {
+    hello: String
+}
+
+type Mutation {
+    createOrder(productId: String!, quantity: Int!): Order
+}
+
+type Order {
+    orderId: String
+    status: String
+    message: String
+}

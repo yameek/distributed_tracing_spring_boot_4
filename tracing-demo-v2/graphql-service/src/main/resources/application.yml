@@ -1,0 +1,25 @@
+spring:
+  application:
+    name: graphql-service
+  graphql:
+    graphiql:
+      enabled: true
+
+server:
+  port: 8080
+
+management:
+  tracing:
+    sampling:
+      probability: 1.0 # Sample 100% of requests for demo
+  otlp:
+    tracing:
+      endpoint: http://localhost:4318/v1/traces
+  endpoints:
+    web:
+      exposure:
+        include: health, info, prometheus
+
+logging:
+  pattern:
+    level: "%5p [${spring.application.name:},%X{traceId:-},%X{spanId:-}]"

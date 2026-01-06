@@ -1,0 +1,65 @@
+{
+    "info": {
+        "_postman_id": "b5a9c0c0-1234-5678-9012-abcdef123456",
+        "name": "Tracing Demo Collection",
+        "description": "Collection to trigger distributed traces in the Demo System",
+        "schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json"
+    },
+    "item": [
+        {
+            "name": "Create Order (GraphQL)",
+            "request": {
+                "method": "POST",
+                "header": [],
+                "body": {
+                    "mode": "graphql",
+                    "graphql": {
+                        "query": "mutation {\n  createOrder(productId: \"SmartWatch\", quantity: 1) {\n    orderId\n    status\n    message\n  }\n}",
+                        "variables": ""
+                    }
+                },
+                "url": {
+                    "raw": "http://localhost:8080/graphql",
+                    "protocol": "http",
+                    "host": [
+                        "localhost"
+                    ],
+                    "port": "8080",
+                    "path": [
+                        "graphql"
+                    ]
+                }
+            },
+            "response": []
+        },
+        {
+            "name": "Direct Order (REST - Optional)",
+            "request": {
+                "method": "POST",
+                "header": [
+                    {
+                        "key": "Content-Type",
+                        "value": "application/json",
+                        "type": "text"
+                    }
+                ],
+                "body": {
+                    "mode": "raw",
+                    "raw": "{\n    \"productId\": \"DirectItem\",\n    \"quantity\": 5\n}"
+                },
+                "url": {
+                    "raw": "http://localhost:8081/orders",
+                    "protocol": "http",
+                    "host": [
+                        "localhost"
+                    ],
+                    "port": "8081",
+                    "path": [
+                        "orders"
+                    ]
+                }
+            },
+            "response": []
+        }
+    ]
+}

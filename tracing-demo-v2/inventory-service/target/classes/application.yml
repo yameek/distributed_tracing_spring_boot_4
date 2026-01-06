@@ -1,0 +1,29 @@
+spring:
+  application:
+    name: inventory-service
+  rabbitmq:
+    host: localhost
+    port: 5672
+    listener:
+      simple:
+        missing-queues-fatal: false
+        auto-startup: true
+
+server:
+  port: 8082
+
+management:
+  tracing:
+    sampling:
+      probability: 1.0
+  otlp:
+    tracing:
+      endpoint: http://localhost:4318/v1/traces
+  endpoints:
+    web:
+      exposure:
+        include: health, info, prometheus
+
+logging:
+  pattern:
+    level: "%5p [${spring.application.name:},%X{traceId:-},%X{spanId:-}]"

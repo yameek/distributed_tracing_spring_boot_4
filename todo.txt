@@ -1,0 +1,171 @@
+Distributed Tracing Demo — TODO List
+Phase 0 — Baseline Setup (No Learning Yet, Just Wiring)
+
+ Create docker-compose.yml
+
+ RabbitMQ
+
+ Tempo (OTLP enabled)
+
+ Loki
+
+ Grafana (datasources preconfigured)
+
+ Verify Grafana UI opens (localhost:3000)
+
+ Verify Tempo receives spans (empty traces OK)
+
+ Verify Loki receives logs (no traceId yet)
+
+Stop condition: Infrastructure is stable before touching code.
+
+Phase 1 — GraphQL Root Trace (Entry Point Mastery)
+
+ Create graphql-service
+
+ Enable Micrometer Tracing (OTel bridge)
+
+ Configure OTLP exporter → Tempo
+
+ Configure Loki appender
+
+ Expose createOrder GraphQL mutation
+
+ Confirm root span appears in Tempo
+
+ Add custom span around GraphQL resolver
+
+Name it meaningfully (graphql.createOrder)
+
+ Add traceId to logs (MDC check)
+
+Stop condition: One request = one trace, root span visible.
+
+Phase 2 — REST Propagation (Synchronous Boundary)
+
+ Create order-service
+
+ Enable Micrometer Tracing
+
+ Expose POST /orders
+
+ Call from GraphQL service
+
+ Verify trace context propagates via HTTP
+
+ Confirm GraphQL span → REST span relationship
+
+ Check logs contain same traceId
+
+Stop condition: Single trace spans across two services.
+
+Phase 3 — Database Instrumentation (Automatic Spans)
+
+ Add H2 + Spring Data JPA
+
+ Save order entity
+
+ Verify JDBC span appears automatically
+
+ Confirm DB span is a child of REST span
+
+Stop condition: DB operation visible in waterfall view.
+
+Phase 4 — RabbitMQ Publish (Async Boundary #1)
+
+ Configure RabbitMQ exchange + queue
+
+ Publish order message from order-service
+
+ Verify producer span exists
+
+ Confirm trace context injected into AMQP headers
+
+Stop condition: Trace does NOT break after publish.
+
+Phase 5 — RabbitMQ Consume (Async Boundary #2)
+
+ Create inventory-service
+
+ Configure RabbitMQ listener
+
+ Enable Micrometer Tracing
+
+ Consume message
+
+ Add custom business span (inventory.update)
+
+ Verify consumer span is child of publish span
+
+ Confirm full end-to-end trace
+
+Stop condition: Trace flows across async boundary.
+
+Phase 6 — Log ↔ Trace Correlation (Debugging Skill)
+
+ Verify traceId appears in logs for all services
+
+ Click a span in Tempo
+
+ Jump to Loki using traceId filter
+
+ Confirm logs align with spans
+
+Stop condition: You can debug using trace → logs.
+
+Phase 7 — Failure Experiments (Where Learning Actually Happens)
+Intentional Breaks
+
+ Remove AMQP header propagation
+
+ Observe trace split in Tempo
+
+ Restore propagation
+
+ Stop inventory-service
+
+ Publish messages
+
+ Observe trace ends at RabbitMQ
+
+ Throw exception in inventory listener
+
+ Observe error tags on spans
+
+Stop condition: You understand why traces break.
+
+Phase 8 — Sampling & Noise Control (Production Reality)
+
+ Enable 100% sampling
+
+ Switch to probability sampling (e.g. 10%)
+
+ Observe missing traces
+
+ Test parent-based sampling
+
+Stop condition: You understand trace loss tradeoffs.
+
+Phase 9 — Documentation Upgrade (Proof of Mastery)
+
+ Add “What You Will Learn” section
+
+ Document trace boundaries
+
+ Add trace walkthrough section
+
+ Add failure scenarios section
+
+ Add production mapping table
+
+Stop condition: README teaches, not just describes.
+
+Phase 10 — Optional (Strong Differentiator)
+
+ Rename spans for business clarity
+
+ Add orderId as span attribute
+
+ Screenshot one full trace
+
+ Annotate waterfall diagram
