@@ -1,0 +1,189 @@
+plugins {
+    id 'java'
+    id 'org.springframework.boot' version '3.5.7'
+    id 'io.spring.dependency-management' version '1.1.7'
+    id 'maven-publish'
+}
+
+group = 'com.bracits'
+version = '1.0.1'
+description = 'demo-sdk-app'
+
+java {
+    toolchain {
+        languageVersion = JavaLanguageVersion.of(21)
+    }
+}
+
+repositories {
+    mavenLocal()
+    mavenCentral()
+}
+
+dependencies {
+    // Spring Boot
+    implementation 'org.springframework.boot:spring-boot-starter-web'
+    implementation 'org.springframework.boot:spring-boot-starter-validation'
+
+    // Lombok
+    compileOnly 'org.projectlombok:lombok'
+    annotationProcessor 'org.projectlombok:lombok'
+
+    // Bits API SDK Generator - Make sure these are in your local Maven repository
+    compileOnly 'com.bracits:bits-sdk-annotations:1.0.1'
+    annotationProcessor 'com.bracits:bits-sdk-annotations:1.0.1'
+    annotationProcessor 'com.bracits:bits-sdk-processor:1.0.1'
+
+    implementation 'io.github.resilience4j:resilience4j-circuitbreaker:2.1.0'
+    implementation 'io.github.resilience4j:resilience4j-core:2.1.0'
+
+    // Test
+    testImplementation 'org.springframework.boot:spring-boot-starter-test'
+}
+
+// Add generated sources to the compilation path
+sourceSets {
+    main {
+        java {
+            srcDirs += ['build/generated/sources/annotationProcessor/java/main']
+        }
+    }
+}
+
+// Task to build the SDK JAR
+tasks.register('buildSdk', Jar) {
+    archiveBaseName = 'demo-sdk-app-sdk'
+    archiveVersion = '1.0.0'
+
+    // Include ONLY the compiled SDK classes
+    from sourceSets.main.output
+    include 'com/bracits/testsdkapplication/controller/sdk/**'
+
+    dependsOn classes
+
+    doFirst {
+        println "=== Building SDK JAR ==="
+        println "Including SDK classes from: ${sourceSets.main.output.classesDirs.asPath}"
+    }
+
+    doLast {
+        println "=== SDK JAR Created ==="
+        println "Location: ${archiveFile.get()}"
+        println "Contents:"
+        fileTree(archiveFile.get()).visit { details ->
+            if (!details.isDirectory()) {
+                println "  ${details.relativePath}"
+            }
+        }
+    }
+}
+
+// Task to verify SDK generation
+tasks.register('verifySdk') {
+    dependsOn compileJava
+    doLast {
+        println "=== Verifying SDK Generation ==="
+
+        // Check generated sources
+        def generatedDir = file('build/generated/sources/annotationProcessor/java/main')
+        if (generatedDir.exists()) {
+            println "✓ Generated sources found at: ${generatedDir}"
+            def sdkFiles = fileTree(generatedDir) {
+                include '**/sdk/**/*.java'
+            }
+            if (sdkFiles.files) {
+                sdkFiles.each { file ->
+                    println "  - ${file.relativePath(generatedDir)}"
+                }
+            } else {
+                println "  ✗ No SDK files found in generated sources"
+            }
+        } else {
+            println "✗ Generated sources directory not found: ${generatedDir}"
+        }
+
+        // Check compiled classes
+        def classesDir = file('build/classes/java/main')
+        if (classesDir.exists()) {
+            println "✓ Compiled classes found at: ${classesDir}"
+            def sdkClassFiles = fileTree(classesDir) {
+                include '**/sdk/**/*.class'
+            }
+            if (sdkClassFiles.files) {
+                sdkClassFiles.each { file ->
+                    println "  - ${file.relativePath(classesDir)}"
+                }
+            } else {
+                println "  ✗ No SDK class files found in compiled classes"
+            }
+        } else {
+            println "✗ Compiled classes directory not found: ${classesDir}"
+        }
+    }
+}
+
+// Configure publishing - ONLY publish the SDK, not the main application
+publishing {
+    publications {
+        sdk(MavenPublication) {
+            groupId = 'com.bracits'
+            artifactId = 'demo-sdk-app-sdk'
+            version = '1.0.0'
+            artifact buildSdk
+
+            pom {
+                name = 'Demo SDK App SDK'
+                description = 'Auto-generated SDK for Demo SDK Application'
+                url = 'https://github.com/bracits/demo-sdk-app'
+
+                licenses {
+                    license {
+                        name = 'The Apache License, Version 2.0'
+                        url = 'http://www.apache.org/licenses/LICENSE-2.0.txt'
+                    }
+                }
+
+                developers {
+                    developer {
+                        id = 'dev-team'
+                        name = 'Development Team'
+                        email = 'dev@bracits.com'
+                    }
+                }
+            }
+        }
+    }
+
+    repositories {
+        mavenLocal()
+    }
+}
+
+// Build both main app and SDK when building
+tasks.named('build') {
+    dependsOn buildSdk
+}
+
+// Test configuration
+test {
+    useJUnitPlatform()
+}
+
+// Compile configuration
+tasks.withType(JavaCompile) {
+    options.encoding = 'UTF-8'
+    options.compilerArgs += ['-parameters']
+}
+
+// BootJar configuration (main application JAR)
+bootJar {
+    archiveBaseName = 'demo-sdk-app'
+    archiveVersion = '1.0.0'
+}
+
+// Regular Jar (without dependencies)
+jar {
+    archiveBaseName = 'demo-sdk-app'
+    archiveVersion = '1.0.0'
+    enabled = true
+}

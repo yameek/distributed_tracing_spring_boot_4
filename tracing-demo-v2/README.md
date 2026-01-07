@@ -2,7 +2,18 @@
 
 A production-ready implementation of distributed tracing using Spring Boot 4.0.1, Java 25 LTS, Micrometer Tracing, OpenTelemetry, Tempo, and Loki.
 
-> ✅ **Migrated to Java 25 LTS** (January 2026) - See [JAVA_25_MIGRATION.md](JAVA_25_MIGRATION.md) for details
+> ✅ **Migrated to Java 25 LTS** (January 2026)
+
+## Documentation
+
+📚 **All detailed documentation has been moved to** [`../docs/`](../docs/)
+
+- **Quick Start**: [`docs/tracing-demo/tracing_quick_reference.md`](../docs/tracing-demo/tracing_quick_reference.md)
+- **Demo Script**: [`docs/tracing-demo/tracing_demo_script.md`](../docs/tracing-demo/tracing_demo_script.md)
+- **Implementation Guide**: [`docs/tracing-demo/tracing_comprehensive_implementation_guide.md`](../docs/tracing-demo/tracing_comprehensive_implementation_guide.md)
+- **Architecture Diagrams**: [`docs/tracing-demo/tracing_architecture_diagrams.md`](../docs/tracing-demo/tracing_architecture_diagrams.md)
+- **Migration Notes**: [`docs/migration/tracing_java_25_migration.md`](../docs/migration/tracing_java_25_migration.md)
+- **Complete Documentation Index**: [`docs/README.md`](../docs/README.md)
 
 ## Architecture
 
