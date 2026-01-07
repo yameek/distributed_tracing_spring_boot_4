@@ -1,6 +1,8 @@
-# Distributed Tracing Demo v2 - Spring Boot 4.0.1
+# Distributed Tracing Demo v2 - Spring Boot 4.0.1 with Java 25 LTS
 
-A fresh implementation of the distributed tracing demo using Spring Boot 4.0.1, Micrometer Tracing, OpenTelemetry, Tempo, and Loki.
+A production-ready implementation of distributed tracing using Spring Boot 4.0.1, Java 25 LTS, Micrometer Tracing, OpenTelemetry, Tempo, and Loki.
+
+> ✅ **Migrated to Java 25 LTS** (January 2026) - See [JAVA_25_MIGRATION.md](JAVA_25_MIGRATION.md) for details
 
 ## Architecture
 
@@ -19,8 +21,20 @@ A fresh implementation of the distributed tracing demo using Spring Boot 4.0.1, 
 ## Prerequisites
 
 - Docker & Docker Compose
-- Java 21+
-- Maven 3.9+
+- **Java 25 LTS** (recommended) or Java 21+
+- Maven 3.8.7+
+
+### Installing Java 25 LTS
+
+```bash
+# Using SDKMAN (recommended)
+sdk install java 25.0.1-open
+sdk use java 25.0.1-open
+
+# Verify installation
+java -version
+# Should show: openjdk version "25.0.1"
+```
 
 ## Setup
 
