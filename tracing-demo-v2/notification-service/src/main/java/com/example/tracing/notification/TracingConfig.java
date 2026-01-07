@@ -1,5 +1,13 @@
 package com.example.tracing.notification;
 
+import java.util.Collections;
+
+import org.springframework.beans.factory.annotation.Value;
+import org.springframework.context.annotation.Bean;
+import org.springframework.context.annotation.Configuration;
+
+import io.micrometer.tracing.otel.bridge.OtelBaggageManager;
+import io.micrometer.tracing.otel.bridge.OtelCurrentTraceContext;
 import io.micrometer.tracing.otel.bridge.OtelTracer;
 import io.opentelemetry.api.OpenTelemetry;
 import io.opentelemetry.api.trace.Tracer;
@@ -9,9 +17,6 @@ import io.opentelemetry.sdk.resources.Resource;
 import io.opentelemetry.sdk.trace.SdkTracerProvider;
 import io.opentelemetry.sdk.trace.export.BatchSpanProcessor;
 import io.opentelemetry.semconv.ResourceAttributes;
-import org.springframework.beans.factory.annotation.Value;
-import org.springframework.context.annotation.Bean;
-import org.springframework.context.annotation.Configuration;
 
 @Configuration
 public class TracingConfig {
@@ -47,10 +52,20 @@ public class TracingConfig {
 
     @Bean
     public io.micrometer.tracing.Tracer micrometerTracer(Tracer otelTracer, OpenTelemetry openTelemetry) {
-        io.micrometer.tracing.otel.bridge.OtelCurrentTraceContext otelCurrentTraceContext =
-                new io.micrometer.tracing.otel.bridge.OtelCurrentTraceContext();
-        io.micrometer.tracing.otel.bridge.EventPublishingContextWrapper eventPublisher =
-                new io.micrometer.tracing.otel.bridge.EventPublishingContextWrapper();
-        return new OtelTracer(otelTracer, otelCurrentTraceContext, eventPublisher);
+        OtelCurrentTraceContext otelCurrentTraceContext = new OtelCurrentTraceContext();
+        
+        // Create event publisher
+        OtelTracer.EventPublisher eventPublisher = event -> {
+            // Default implementation - can be customized for event handling
+        };
+        
+        // Create baggage manager
+        OtelBaggageManager baggageManager = new OtelBaggageManager(
+            otelCurrentTraceContext, 
+            Collections.emptyList(), 
+            Collections.emptyList()
+        );
+        
+        return new OtelTracer(otelTracer, otelCurrentTraceContext, eventPublisher, baggageManager);
     }
 }
