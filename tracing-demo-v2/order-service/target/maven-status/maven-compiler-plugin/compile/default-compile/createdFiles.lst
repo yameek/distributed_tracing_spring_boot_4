@@ -6,4 +6,5 @@ com/example/tracing/order/CreateOrderRequest.class
 com/example/tracing/order/OrderController.class
 com/example/tracing/order/OrderEntity.class
 com/example/tracing/order/OrderRepository.class
+com/example/tracing/order/TracingConfig.class
 com/example/tracing/order/Order.class

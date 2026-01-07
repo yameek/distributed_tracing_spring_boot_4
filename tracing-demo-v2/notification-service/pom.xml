@@ -71,6 +71,10 @@
 		<artifactId>opentelemetry-semconv</artifactId>
 		<version>1.26.0-alpha</version>
 	</dependency>
+	<dependency>
+		<groupId>io.micrometer</groupId>
+		<artifactId>micrometer-tracing</artifactId>
+	</dependency>
 
 	<!-- JSON Message Converter for RabbitMQ -->
 	<dependency>

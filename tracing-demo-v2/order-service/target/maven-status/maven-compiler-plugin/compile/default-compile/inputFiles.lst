@@ -6,3 +6,4 @@
 /home/yaziz/workspace/self_task/tracing basics/tracing-demo-v2/order-service/src/main/java/com/example/tracing/order/OrderServiceApplication.java
 /home/yaziz/workspace/self_task/tracing basics/tracing-demo-v2/order-service/src/main/java/com/example/tracing/order/RabbitMqConfig.java
 /home/yaziz/workspace/self_task/tracing basics/tracing-demo-v2/order-service/src/main/java/com/example/tracing/order/TraceIdFilter.java
+/home/yaziz/workspace/self_task/tracing basics/tracing-demo-v2/order-service/src/main/java/com/example/tracing/order/TracingConfig.java

@@ -4,10 +4,6 @@ spring:
   rabbitmq:
     host: localhost
     port: 5672
-    listener:
-      simple:
-        missing-queues-fatal: false
-        auto-startup: true
 
 server:
   port: 8083
@@ -17,17 +13,26 @@ management:
     enabled: true
     sampling:
       probability: 1.0
-  otlp:
-    tracing:
-      endpoint: http://localhost:4318/v1/traces
+    baggage:
+      enabled: true
+      correlation:
+        enabled: true
+        fields:
+          - traceId
+          - spanId
   endpoints:
     web:
       exposure:
-        include: health, info, prometheus
+        include: health, info, prometheus, metrics
 
 logging:
   pattern:
-    correlation:
-      enabled: true
+    level: "%5p [${spring.application.name:},%X{traceId:-},%X{spanId:-}]"
+  
+# MDC keys for tracing
+micrometer:
+  tracing:
+    propagation:
+      type: W3C
 
 # Logging configuration is in logback-spring.xml for JSON format with trace IDs
