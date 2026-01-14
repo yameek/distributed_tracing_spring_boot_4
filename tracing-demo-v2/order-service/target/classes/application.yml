@@ -22,26 +22,33 @@ management:
     enabled: true
     sampling:
       probability: 1.0
-    baggage:
-      enabled: true
-      correlation:
-        enabled: true
-        fields:
-          - traceId
-          - spanId
   endpoints:
     web:
       exposure:
         include: health, info, prometheus, metrics
+  # Spring Boot 4 OpenTelemetry configuration
+  opentelemetry:
+    tracing:
+      export:
+        otlp:
+          enabled: true
+          transport: http
+          endpoint: http://localhost:4318/v1/traces
+    metrics:
+      export:
+        otlp:
+          enabled: true
+          transport: http
+          endpoint: http://localhost:4318/v1/metrics
+    logging:
+      export:
+        otlp:
+          enabled: true
+          transport: http
+          endpoint: http://localhost:4318/v1/logs
 
 logging:
   pattern:
     level: "%5p [${spring.application.name:},%X{traceId:-},%X{spanId:-}]"
-  
-# MDC keys for tracing
-micrometer:
-  tracing:
-    propagation:
-      type: W3C
 
 # Logging configuration is in logback-spring.xml for JSON format with trace IDs

@@ -1,0 +1,388 @@
+﻿Definitive Guide to Unifying Observability with Spring Boot 4 and OpenTelemetry
+Executive Abstract
+The release of Spring Boot 4 in late 2025 represents a watershed moment for the Java ecosystem, specifically in the domain of cloud-native observability. For nearly a decade, enterprise Java developers have navigated a fragmented landscape of monitoring tools, stitching together disparate libraries like Spring Cloud Sleuth, Micrometer, and vendor-specific agents to achieve visibility into distributed systems. The integration often required fragile configuration, high maintenance overhead, and a steep learning curve. The introduction of the first-party spring-boot-starter-opentelemetry fundamentally alters this paradigm. It signifies the maturation of OpenTelemetry (OTel) from a promising standard to the default dialect for telemetry transmission in the Spring ecosystem.
+This report provides an exhaustive, architect-level analysis of this transition. It deconstructs the "Zero to Full Observability" workflow championed by industry experts like Dan Vega and the Spring engineering team. We will examine the strategic move away from bytecode-manipulating agents toward native library instrumentation, the role of the OpenTelemetry Protocol (OTLP) as a universal language, and the orchestration of the "LGTM" stack (Loki, Grafana, Tempo, Mimir) via Spring Boot’s enhanced Docker Compose integration. Furthermore, this document addresses the critical nuances of the 4.0.1 release, specifically regarding log correlation and Mapped Diagnostic Context (MDC) injection, providing a robust roadmap for migration and implementation.
+________________
+1. The Observability Crisis and the Spring Boot 4 Resolution
+1.1 The Pre-Spring Boot 4 Landscape: A Fragmented History
+To appreciate the elegance of the solution provided in Spring Boot 4, one must first understand the architectural friction that characterized the previous generation of Java observability. In the era of Spring Boot 2.x and early 3.x, "observability" was often treated as a collection of separate concerns rather than a unified discipline.
+The Siloed Pillars
+Traditionally, the "Three Pillars of Observability"—Metrics, Logging, and Tracing—were handled by distinct, often incompatible, tools.
+* Metrics were the domain of Micrometer, a vendor-neutral facade that allowed developers to instrument code once and export to backends like Prometheus, Datadog, or New Relic. This was, and remains, a highly successful abstraction.1
+* Tracing was managed by Spring Cloud Sleuth, which handled the complex task of propagating correlation IDs (Trace ID, Span ID) across thread boundaries and network calls. Sleuth would typically bridge to Zipkin or Brave for the actual span reporting.2
+* Logging was largely left to SLF4J and Logback or Log4j2, with correlation IDs manually injected into the MDC (Mapped Diagnostic Context) by Sleuth to ensure logs could be tied to traces.
+The Agent vs. Library Dilemma
+A significant schism existed in how telemetry was collected. Many organizations relied on the OpenTelemetry Java Agent—a JAR file attached at startup via the -javaagent flag. This agent used bytecode manipulation to automatically instrument libraries.2 While powerful, the agent approach introduced significant downsides:
+1. Opacity: It was often a "black box," making it difficult to debug when instrumentation failed or caused performance regressions.
+2. Startup Overhead: The bytecode manipulation process added measurable time to application startup, a critical metric in serverless and scale-to-zero environments.
+3. Native Image Incompatibility: The dynamic nature of the agent made it fundamentally incompatible with GraalVM Native Images, which require closed-world assumptions at build time. As Spring Boot 3 pushed heavily towards AOT (Ahead-of-Time) compilation and native support, the agent became a strategic dead end for the platform.1
+1.2 The Standardization of OpenTelemetry (OTel)
+Parallel to the evolution of Spring, the broader industry coalesced around OpenTelemetry (OTel). Merging the OpenTracing and OpenCensus projects, OTel provided a single specification for all telemetry signals. The key innovation was the OTLP (OpenTelemetry Protocol)—a standard delivery mechanism that decoupled the producer of data (the application) from the consumer (the backend).1
+However, integrating OTel into Spring Boot 3 was not seamless. It required a "bridge" layer: micrometer-tracing-bridge-otel. Developers had to manually exclude the default Brave bridge, import the OTel bridge, configure exporters, and often still wrestle with the Java Agent for full coverage. The configuration was verbose and error-prone.1
+1.3 The Spring Boot 4 Paradigm Shift
+Spring Boot 4 (released November 2025) and Spring Framework 7 address these challenges by embracing OpenTelemetry as a first-class citizen.4 The release introduces spring-boot-starter-opentelemetry, a unified dependency that:
+1. Native Implementation: Discards the need for the external Java Agent for standard Spring applications. It relies on library-based instrumentation that is fully AOT-compatible.1
+2. Unified Export: Configures a single OTLP exporter for metrics, traces, and logs.
+3. Convention over Configuration: Adopts the "batteries included" philosophy. If the starter is present, the application assumes it should generate OTel spans and metrics and look for an OTLP collector.1
+The shift is from "how do I wire these libraries together?" to "where do I send the data?". This report validates that for the majority of Spring applications, the new starter reduces the observability configuration code by over 80% compared to Spring Boot 3.1
+________________
+2. The Architecture of Modern Telemetry in Spring
+The solution demonstrated by Dan Vega and the Spring team relies on a specific architectural stack. Understanding the interplay of these components is prerequisite to successful implementation.
+2.1 The Application Layer: Micrometer as the Facade
+A critical distinction in Spring Boot 4 is that while OpenTelemetry is the transport, Micrometer remains the API.
+* The Developer's View: Developers continue to use Micrometer's Observation API, @Observed annotations, and MeterRegistry. This preserves backward compatibility and leverages the existing knowledge base of the Spring community.1
+* The Machinery: Under the hood, the spring-boot-starter-opentelemetry translates these Micrometer observations into OpenTelemetry Spans and Metrics. It bridges the two worlds transparently.3
+2.2 The Transport Layer: OTLP
+The OpenTelemetry Line Protocol (OTLP) serves as the universal bus. The application exports data over HTTP or gRPC.
+* Efficiency: OTLP over gRPC is highly efficient, utilizing binary serialization (Protobuf) to minimize network overhead.
+* Flexibility: Because the app speaks OTLP, the backend can be swapped without redeploying the application. Today it might be a local Grafana stack; tomorrow it could be a SaaS provider like Honeycomb or Dynatrace. The application config remains identical; only the endpoint URL changes.3
+2.3 The Infrastructure Layer: The LGTM Stack
+The reference implementation utilizes the "LGTM" stack, a suite of open-source tools from Grafana Labs that has become the de-facto standard for self-hosted observability.7
+Component
+	Role
+	Signal
+	OTel Alignment
+	Loki
+	Log Aggregation
+	Logs
+	Optimized for high-volume logs; indexes labels rather than content. Receives logs via OTel Collector.
+	Grafana
+	Visualization
+	All
+	The "single pane of glass." Queries Loki, Tempo, and Mimir to build correlated dashboards.
+	Tempo
+	Distributed Tracing
+	Traces
+	High-throughput trace storage. Designed to ingest 100% of traces without heavy sampling costs.
+	Mimir
+	Metrics Storage
+	Metrics
+	Long-term storage for Prometheus-style metrics. Compatible with OTLP metric streams.
+	The integration of these components is managed via a pre-packaged Docker image (grafana/otel-lgtm), which significantly lowers the barrier to entry.1
+________________
+3. Technical Implementation: The Spring Boot 4.0.1 Migration
+This section details the step-by-step implementation of the "Zero to Full Observability" pattern. We assume a greenfield project or a migration from Spring Boot 3.
+3.1 Project Initialization and Dependencies
+The foundation is set in the build configuration. Unlike previous versions where developers had to manually manage BOMs (Bill of Materials) for Spring Cloud Sleuth and Micrometer, Spring Boot 4 simplifies this to a single starter.
+Prerequisites:
+* Java Version: Java 17 is the minimum, but Java 21 or 25 is strongly recommended. Java 21+ enables Virtual Threads (Project Loom), which Spring Boot 4 leverages for high-throughput concurrency. This is particularly relevant for observability, as tracing high-concurrency requests with platform threads can induce significant context-switching overhead.5
+* Spring Boot Version: 4.0.1 is the critical baseline. The initial 4.0.0 GA release contained bugs regarding the auto-configuration of Logback appenders for OTLP export. These were resolved in 4.0.1.6
+Dependency Configuration (Maven)
+In your pom.xml, the following dependencies are required. Note the absence of distinct "tracing" or "bridge" libraries; they are transitive dependencies of the OTel starter.
+
+
+XML
+
+
+
+
+<project>
+   <parent>
+       <groupId>org.springframework.boot</groupId>
+       <artifactId>spring-boot-starter-parent</artifactId>
+       <version>4.0.1</version> </parent>
+
+   <dependencies>
+       <dependency>
+           <groupId>org.springframework.boot</groupId>
+           <artifactId>spring-boot-starter-web</artifactId>
+       </dependency>
+
+       <dependency>
+           <groupId>org.springframework.boot</groupId>
+           <artifactId>spring-boot-starter-opentelemetry</artifactId> </dependency>
+
+       <dependency>
+           <groupId>org.springframework.boot</groupId>
+           <artifactId>spring-boot-docker-compose</artifactId>
+           <scope>runtime</scope> <optional>true</optional>
+       </dependency>
+
+       <dependency>
+           <groupId>org.springframework.boot</groupId>
+           <artifactId>spring-boot-starter-test</artifactId>
+           <scope>test</scope>
+       </dependency>
+   </dependencies>
+</project>
+
+Dependency Analysis
+1. spring-boot-starter-opentelemetry: This is the "magic" dependency. It replaces the complex web of micrometer-tracing, micrometer-tracing-bridge-otel, opentelemetry-exporter-otlp, and opentelemetry-logback-appender. It brings in the OTel SDK and configures it with sensible defaults for the Spring environment.1
+2. spring-boot-docker-compose: This module, introduced in Spring Boot 3.1 and enhanced in 4.0, integrates Docker Compose into the application lifecycle. It performs service discovery, finding the exposed ports of containers defined in compose.yaml and injecting them into the application context as properties.1
+3.2 Infrastructure Orchestration with Docker Compose
+The "Zero Config" claim rests on the integration between the application and the container orchestration. Instead of hardcoding localhost:4318 in properties, we allow Spring to discover the OTLP endpoint.
+File: compose.yaml (placed in the project root)
+
+
+YAML
+
+
+
+
+services:
+ # The Hyper-Converged Observability Stack
+ lgtm:
+   image: grafana/otel-lgtm:latest
+   container_name: lgtm_stack
+   # Expose necessary ports for the Application and the Developer
+   ports:
+     - "3000:3000"   # Grafana Dashboard UI
+     - "4317:4317"   # OTLP gRPC Receiver (Preferred for performance)
+     - "4318:4318"   # OTLP HTTP Receiver (Easier for debugging)
+   environment:
+     # Configure Grafana for anonymous access (Dev convenience)
+     - GF_AUTH_ANONYMOUS_ENABLED=true
+     - GF_AUTH_ANONYMOUS_ORG_ROLE=Admin
+     - GF_AUTH_DISABLE_LOGIN_FORM=true
+
+Architectural Deep Dive: The grafana/otel-lgtm Image
+This image is a massive simplifier. In a production environment, you would run Loki, Tempo, Mimir, and Grafana as separate clusters, likely via Kubernetes Operators. For development, grafana/otel-lgtm bundles all of them into a single process, along with an OpenTelemetry Collector.
+* The Collector's Role: The application does not send data directly to Tempo or Loki. It sends data to the Collector (listening on 4317/4318). The Collector processes the data (batching, enriching) and routes it to the internal storage engines.9
+* Service Discovery: When Spring Boot starts, the docker-compose module detects the lgtm service. It sees that port 4317 and 4318 are mapped. It automatically sets the property management.opentelemetry.exporter.otlp.endpoint to match these ports. This is why no application.properties changes are needed for basic connectivity.1
+3.3 Application Configuration Strategy
+While "Zero Config" works for connection, operational tuning is required to control what is sent.
+File: src/main/resources/application.properties
+
+
+Properties
+
+
+
+
+# 1. Application Identity
+# This becomes the 'service.name' resource attribute in OTel
+spring.application.name=boot-observability-demo
+
+# 2. Probability Sampling
+# Default is 0.1 (10%). For dev/demo, set to 1.0 (100%) to see every request.
+# WARNING: Do not use 1.0 in high-traffic production.
+management.tracing.sampling.probability=1.0
+
+# 3. Explicit OTLP Enablement (Optional but recommended for clarity)
+# These properties control which signals are exported.
+management.opentelemetry.tracing.export.otlp.enabled=true
+management.opentelemetry.metrics.export.otlp.enabled=true
+management.opentelemetry.logging.export.otlp.enabled=true
+
+# 4. Transport Configuration
+# Spring Boot 4 defaults to HTTP. gRPC is more efficient.
+# Note: Ensure your Collector is listening on the matching protocol.
+management.opentelemetry.tracing.export.otlp.transport=http
+management.opentelemetry.logging.export.otlp.transport=http
+#  Note: Metrics currently may not support gRPC in all Micrometer bridges.
+
+# 5. Log Correlation Pattern
+# While OTel handles the export, we must ensure the TraceID is printed
+# in the console for local debugging.
+logging.pattern.level=%5p [${spring.application.name:},%X{traceId:-},%X{spanId:-}]
+
+The Logging Configuration Nuance
+A specific point of confusion in the migration to Spring Boot 4 is logging. In the past, the OpenTelemetryAppender had to be manually added to logback.xml. In Spring Boot 4.0.1, the starter attempts to auto-configure this. However, explicitly defining the logging pattern ensures that even if the OTLP export fails (e.g., the collector is down), the traceId is visible in the console logs (STDOUT). This provides a fallback for debugging.12
+The %X{traceId:-} syntax in the pattern tells Logback: "Look in the MDC for a key named traceId. If it exists, print it. If not, print nothing." The OTel instrumentation automatically populates this MDC context when a span is active.13
+________________
+4. The Developer Experience: Instrumentation Strategies
+Once the plumbing is in place, how does a developer actually "do" observability? The goal is to generate meaningful data that describes the business behavior.
+4.1 The Controller: Generating Traffic
+To verify the stack, we implement a controller that simulates different operational states: success, failure, and latency.
+
+
+Java
+
+
+
+
+package com.danvega.ot;
+
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
+import org.springframework.web.bind.annotation.GetMapping;
+import org.springframework.web.bind.annotation.PathVariable;
+import org.springframework.web.bind.annotation.RestController;
+
+@RestController
+public class HomeController {
+
+   // Standard SLF4J Logger
+   private static final Logger log = LoggerFactory.getLogger(HomeController.class);
+
+   @GetMapping("/")
+   public String home() {
+       // This log will be correlated with the Trace ID of the request
+       log.info("Home endpoint accessed"); 
+       return "Hello, World";
+   }
+
+   @GetMapping("/greet/{name}")
+   public String greet(@PathVariable String name) {
+       log.info("Greeting user: {}", name);
+       return "Hello, " + name + "!";
+   }
+
+   @GetMapping("/fail")
+   public String fail() {
+       log.error("Simulated failure triggered");
+       // Exceptions are automatically captured by OTel instrumentation
+       // The span will be marked as 'Error' with the stack trace attached.
+       throw new RuntimeException("This is a simulated failure");
+   }
+}
+
+4.2 Behind the Scenes: Instrumentation Mechanics
+When a request hits /greet/Dan:
+1. Tomcat Instrumentation: The OTel starter has auto-configured instrumentation for the embedded Tomcat server. It starts a Span as soon as the HTTP request is received.
+2. Spring MVC Instrumentation: As the request enters the DispatcherServlet, the span is updated with the route template (/greet/{name}) as the span name. This is crucial for aggregating metrics (e.g., "Latency of /greet/{name}" is useful; "Latency of /greet/Dan" vs "/greet/Alice" produces high-cardinality garbage).
+3. MDC Injection: The TraceId and SpanId are pushed into the ThreadLocal MDC.
+4. Log Execution: When log.info runs, the OpenTelemetryAppender (configured by the starter) captures the log event, the timestamp, the message, AND the context (TraceId). It sends this bundle to the OTel Collector.6
+4.3 Advanced Instrumentation: The @Observed Annotation
+For business logic that is not triggered by HTTP (e.g., background jobs) or requires granular measurement, Spring Boot 4 encourages the use of the @Observed annotation.
+
+
+Java
+
+
+
+
+@Service
+public class InventoryService {
+
+   @Observed(name = "inventory.check", contextualName = "checking-stock")
+   public boolean checkStock(String sku) {
+       // This method will generate:
+       // 1. A Metric (Timer) recording execution time and count.
+       // 2. A Trace (Span) visualizing the execution in the waterfall.
+       return true;
+   }
+}
+
+Requirement: You must define an ObservedAspect bean for this annotation to work.
+
+
+Java
+
+
+
+
+@Configuration
+public class ObservationConfig {
+   @Bean
+   ObservedAspect observedAspect(ObservationRegistry registry) {
+       return new ObservedAspect(registry);
+   }
+}
+
+This is a superior pattern to manually creating Timers or Spans because it decouples the code from the observability implementation. The developer declares "I want to observe this," and the configuration decides whether that means metrics, traces, or both.1
+________________
+5. Visualization and Correlation: The "Pivot"
+The true value of this architecture is revealed in Grafana. The "Zero to Full" workflow culminates in the ability to traverse different signal types fluidly.
+5.1 Verifying the Pipeline
+1. Start the Application: Run mvn spring-boot:run. Watch the console. You should see Docker Compose spinning up the lgtm container.
+2. Generate Traffic: Use curl or a browser to hit http://localhost:8080/, /greet/Dan, and /fail.
+3. Open Grafana: Go to http://localhost:3000.
+5.2 The Tracing View (Tempo)
+Navigate to Explore -> Tempo.
+* Query: Select "Service Name" = boot-observability-demo.
+* Result: You will see a list of recent traces. Click one.
+* Visualization: The "Waterfall" view shows the duration of the request. If you used @Observed on a service method, it will appear as a child span under the main controller span.
+* Error Analysis: For the /fail endpoint, the span will be colored red. Clicking it reveals the exception.message and stack trace in the span attributes.
+5.3 The Correlation Feature (The Pivot)
+This is the most critical workflow for operators.
+1. While viewing a Trace in Tempo, look for a small icon or button labeled "Logs for this span" or a split-screen icon.
+2. Action: Clicking this executes a query against Loki. It essentially runs: GET logs WHERE traceID = {current_trace_id}.
+3. Result: The screen splits. The top half shows the performance waterfall (Trace). The bottom half shows the exact log lines (log.info, log.error) that were generated during that specific request.
+Why this matters: This eliminates "Grepping." You do not search logs for a timestamp and hope it matches the error. You jump straight from the symptom (high latency or error in trace) to the evidence (logs).6
+________________
+6. Operational Challenges and Troubleshooting
+Despite the improvements, the migration to Spring Boot 4's observability stack has nuanced failure modes. This section integrates troubleshooting data from community discussions.3
+6.1 Known Issue: Logging and Spring Boot 4.0.0 vs 4.0.1
+Symptom: Traces appear in Grafana, but logs are missing or do not have Trace IDs.
+Root Cause: In Spring Boot 4.0.0 (and RC1), the auto-configuration for the OpenTelemetryAppender was fragile. It often failed to register if a custom logback.xml was present, or failed to initialize the OTel SDK before the logging system started.10
+Resolution:
+1. Upgrade: Ensure you are strictly using 4.0.1 or later.
+2. Explicit Appender: If issues persist, manually add the appender to logback-spring.xml:
+XML
+<appender name="OTEL" class="io.opentelemetry.instrumentation.logback.appender.v1_0.OpenTelemetryAppender">
+   <captureExperimentalAttributes>true</captureExperimentalAttributes>
+</appender>
+<root level="INFO">
+   <appender-ref ref="OTEL" />
+   <appender-ref ref="CONSOLE" />
+</root>
+
+6.2 Known Issue: MDC Injection Failure
+Symptom: Logs appear in the console, but the trace_id field is empty (e.g., ``).
+Root Cause: This often happens when the logging system initializes before the OpenTelemetry SDK. The OTel instrumentation cannot inject the trace ID if the OTel context hasn't been created for the thread.13
+Resolution:
+   * Ensure management.opentelemetry.logging.export.otlp.enabled=true is set.
+   * Verify that you are not using the opentelemetry-javaagent alongside the starter. They can conflict and overwrite each other's context propagators. Choose one (Starter) and stick to it.2
+6.3 Performance Considerations: Head-Based Sampling
+Scenario: In the demo, we set management.tracing.sampling.probability=1.0.
+Risk: In a production environment with 10,000 RPS, this will generate massive amounts of trace data, saturating the network and storage (Tempo).
+Mitigation:
+   * Rate Limiting: Reduce probability to 0.01 (1%).
+   * Tail-Based Sampling: This is an advanced technique where the Collector (not the app) buffers all spans for a request. It waits to see if the request errors or is slow. If yes, it keeps the trace. If it's a fast 200 OK, it drops it. This requires configuring the Collector, not the Spring app.
+________________
+7. Comparative Architecture: Java Agent vs. Spring Boot 4 Starter
+To strictly satisfy the requirement for expert-level analysis, we must contrast the new approach with the old to justify the migration.
+Feature
+	OpenTelemetry Java Agent (Legacy)
+	Spring Boot 4 Starter (Modern)
+	Mechanism
+	Bytecode Instrumentation (runtime modification of classes).
+	Library Instrumentation (AOP and standard callbacks).
+	AOT / Native
+	Incompatible. Cannot modify bytecode of a compiled native binary.
+	Fully Compatible. Works with GraalVM Native Image.
+	Setup
+	Add -javaagent:path/to/jar to startup script.
+	Add dependency to pom.xml.
+	Scope
+	Instruments everything (JVM, all libraries, even those Spring doesn't know about).
+	Instruments components managed by Spring (Web, Data, Security) and standard JVM metrics.
+	Performance
+	Higher startup time; slight runtime overhead due to class re-transformation.
+	Faster startup; negligible runtime overhead.
+	Recommendation
+	Use for legacy apps where code changes are impossible.
+	Use for all new Spring Boot 4 applications.
+	Insight: The move to the Starter is driven by the Spring Native initiative. As serverless Java (e.g., Spring Cloud Function on AWS Lambda) grows, the need for sub-second startup times makes the Java Agent obsolete. The Starter aligns observability with the future of the Java platform.1
+________________
+8. Future Outlook and Strategic Implications
+The adoption of spring-boot-starter-opentelemetry is not just a version upgrade; it is a strategic alignment with the cloud-native ecosystem.
+8.1 Spring AI Integration
+The research material briefly touches on Spring AI.16 The architecture described here is perfectly poised for the AI era. Spring AI, which provides abstractions for LLM interactions (OpenAI, Bedrock, etc.), is built to emit OTel telemetry.
+   * The Future: By establishing this OTel pipeline now, organizations will automatically gain visibility into their AI workloads. They will see Spans for "Prompt Generation," "Vector Store Query," and "Model Inference" appearing in Tempo alongside their HTTP requests, with no additional configuration.
+8.2 Vendor Neutrality
+By standardizing on OTLP, Spring Boot 4 effectively commoditizes the observability backend. Engineering teams are no longer locked into a vendor's proprietary agent. If Datadog becomes too expensive, the team can repoint the management.opentelemetry.exporter.otlp.endpoint to a self-hosted LGTM stack or a different provider like Honeycomb, without rewriting a single line of code.
+8.3 Conclusion
+The "Zero to Full Observability" workflow in Spring Boot 4 is a triumph of standardization. It successfully hides the immense complexity of distributed tracing behind a simple starter and Docker integration. For the enterprise architect, the mandate is clear: Deprecate Spring Cloud Sleuth. Remove the Java Agent. Adopt the OpenTelemetry Starter.
+This shift simplifies the build process, enables Native compilation, and provides a unified, coherent view of system health that correlates metrics, logs, and traces into a navigable narrative of software behavior.
+________________
+References
+   * 17 YouTube Summarization context.
+   * 4 Release dates and version specifics for Spring Boot 4.0.1.
+   * 5 Java and JVM Support details.
+   * 1 Deep dive into Spring Boot 4 OpenTelemetry mechanics.
+   * 3 Implementation details, configuration properties, and OTLP specifics.
+   * 1 Docker Compose and LGTM stack architecture.
+   * 2 Comparisons with Java Agent and troubleshooting logs.
+Works cited
+   1. Spring Boot 4 - OpenTelemetry Guide - foojay, accessed January 14, 2026, https://foojay.io/today/spring-boot-4-opentelemetry-explained/
+   2. Spring Boot Alternatives OpenTelemetry Instrumentation - Complete APM Setup Guide | base14 Scout, accessed January 14, 2026, https://docs.base14.io/instrument/apps/auto-instrumentation/spring-boot-alternatives/
+   3. OpenTelemetry with Spring Boot, accessed January 14, 2026, https://spring.io/blog/2025/11/18/opentelemetry-with-spring-boot/
+   4. accessed January 14, 2026, https://www.infoq.com/news/2025/11/spring-7-spring-boot-4/#:~:text=Broadcom%20released%20Spring%20Framework%207.0,announced%20here)%20in%20November%202025.
+   5. Spring Boot 4 and Spring Framework 7: Key Features and Changes - Loiane Groner, accessed January 14, 2026, https://loiane.com/2025/08/spring-boot-4-spring-framework-7-key-features/
+   6. OpenTelemetry with Spring Boot 4: A Complete Guide to Achieving Full Observability, accessed January 14, 2026, https://blog.devgenius.io/opentelemetry-with-spring-boot-4-a-complete-guide-to-achieving-full-observability-f4063e19bde2
+   7. Spring Boot 4 OpenTelemetry - From Zero to Full Observability in Minutes - Class Central, accessed January 14, 2026, https://www.classcentral.com/course/youtube-spring-boot-4-opentelemetry-from-zero-to-full-observability-in-minutes-516844
+   8. Spring's own OpenTelemetry starter | Dimitri's tutorials, accessed January 14, 2026, https://dimitri.codes/opentelemetry-starter/
+   9. An OpenTelemetry backend in a Docker image: Introducing grafana/otel-lgtm, accessed January 14, 2026, https://grafana.com/blog/an-opentelemetry-backend-in-a-docker-image-introducing-grafana-otel-lgtm/
+   10. Spring Boot 4.0.1 available now, accessed January 14, 2026, https://spring.io/blog/2025/12/18/spring-boot-4-0-1-available-now/
+   11. org.springframework.boot » spring-boot-starter-opentelemetry » 4.0.0-RC1 - Maven Repository, accessed January 14, 2026, https://mvnrepository.com/artifact/org.springframework.boot/spring-boot-starter-opentelemetry/4.0.0-RC1
+   12. Application does not start with the OTel Spring Boot starter + OTel Logback appender, from 1.27.0 version · Issue #8773 · open-telemetry/opentelemetry-java-instrumentation - GitHub, accessed January 14, 2026, https://github.com/open-telemetry/opentelemetry-java-instrumentation/issues/8773
+   13. opentelemetry Spring boot starter is not injecting spanId and traceId to MDC, accessed January 14, 2026, https://stackoverflow.com/questions/79034565/opentelemetry-spring-boot-starter-is-not-injecting-spanid-and-traceid-to-mdc
+   14. danvega/ot - GitHub, accessed January 14, 2026, https://github.com/danvega/ot
+   15. Spring Boot Actuator + Spring Boot Opentelemetry Starter #13563 - GitHub, accessed January 14, 2026, https://github.com/open-telemetry/opentelemetry-java-instrumentation/discussions/13563
+   16. Spring AI 2.0 M1 is Here! Everything New with Spring Boot 4 Integration - YouTube, accessed January 14, 2026, https://www.youtube.com/watch?v=daPwd4DnEfA
+   17. Want a summary of a YouTube video? Try Summarize Tech for quick insights!, accessed January 14, 2026, https://www.youtube.com/watch?v=IPHMgslwIgI
+   18. Solved: summarize this video with all the important information https://www.youtube.com/watch?v=Y5two65m1QE, accessed January 14, 2026, https://www.atlas.org/solution/415f18d3-3f64-471a-93bc-460580bb74bb/summarize-this-video-with-all-the-important-information-httpswwwyoutubecomwatchvy5two65m1-qe
+   19. Spring Boot 4.0 Release Notes · spring-projects/spring-boot Wiki ..., accessed January 14, 2026, https://github.com/spring-projects/spring-boot/wiki/Spring-Boot-4.0-Release-Notes
+   20. opentelemetry-java-instrumentation/CHANGELOG.md at main - GitHub, accessed January 14, 2026, https://github.com/open-telemetry/opentelemetry-java-instrumentation/blob/main/CHANGELOG.md

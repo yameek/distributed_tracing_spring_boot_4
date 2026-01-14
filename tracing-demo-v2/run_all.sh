@@ -1,16 +1,12 @@
 #!/bin/bash
 
-# Set Java 25 LTS (use SDKMAN current which is already Java 25)
-export JAVA_HOME=$HOME/.sdkman/candidates/java/current
-export PATH=$JAVA_HOME/bin:$PATH
-
 # Colors
 GREEN='\033[0;32m'
 BLUE='\033[0;34m'
 RED='\033[0;31m'
 NC='\033[0m' # No Color
 
-echo -e "${BLUE}>>> Starting Distributed Tracing Demo System (v2) with Java 25 LTS <<<${NC}"
+echo -e "${BLUE}>>> Starting Distributed Tracing Demo System (v2) with Spring Boot 4.0.1 <<<${NC}"
 echo "Java version: $(java -version 2>&1 | head -1)"
 
 # 0. Stop any existing services for a fresh start
@@ -35,8 +31,6 @@ cleanup() {
 trap cleanup EXIT
 
 # 2. Start Services (Maven)
-# JAVA_HOME already set to Java 25 at top of script
-# Verify it's set correctly
 echo "Using Java: $(java -version 2>&1 | head -1)"
 
 start_service() {

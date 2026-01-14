@@ -3,4 +3,3 @@
 /home/yaziz/workspace/self_task/tracing basics/tracing-demo-v2/graphql-service/src/main/java/com/example/tracing/graphql/OrderClient.java
 /home/yaziz/workspace/self_task/tracing basics/tracing-demo-v2/graphql-service/src/main/java/com/example/tracing/graphql/OrderController.java
 /home/yaziz/workspace/self_task/tracing basics/tracing-demo-v2/graphql-service/src/main/java/com/example/tracing/graphql/TraceIdFilter.java
-/home/yaziz/workspace/self_task/tracing basics/tracing-demo-v2/graphql-service/src/main/java/com/example/tracing/graphql/TracingConfig.java
