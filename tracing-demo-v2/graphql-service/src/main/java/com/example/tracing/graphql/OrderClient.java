@@ -10,9 +10,9 @@ public class OrderClient {
     private static final Logger log = LoggerFactory.getLogger(OrderClient.class);
     private final RestTemplate restTemplate;
 
-    public OrderClient() {
-        // RestTemplate automatically configures tracing in Spring Boot 4.0.1
-        this.restTemplate = new RestTemplate();
+    // RestTemplate must be injected as a Bean for automatic trace propagation
+    public OrderClient(RestTemplate restTemplate) {
+        this.restTemplate = restTemplate;
     }
 
     public Order createOrder(String productId, int quantity) {

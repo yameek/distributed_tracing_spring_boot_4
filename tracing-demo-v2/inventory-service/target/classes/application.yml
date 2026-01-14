@@ -24,19 +24,21 @@ management:
         otlp:
           enabled: true
           transport: http
-          endpoint: http://localhost:4318/v1/traces
+          # Use the base endpoint - the exporter will append the correct path
+          endpoint: http://localhost:4318
     metrics:
       export:
         otlp:
           enabled: true
           transport: http
-          endpoint: http://localhost:4318/v1/metrics
+          endpoint: http://localhost:4318
+          # Increase step duration to reduce export frequency and errors
+          step: 60s
     logging:
       export:
         otlp:
-          enabled: true
-          transport: http
-          endpoint: http://localhost:4318/v1/logs
+          enabled: false
+          # Disable log export as we're using file-based logging
 
 logging:
   pattern:

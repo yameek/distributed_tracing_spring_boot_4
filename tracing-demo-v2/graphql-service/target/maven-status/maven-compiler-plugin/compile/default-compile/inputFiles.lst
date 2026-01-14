@@ -2,4 +2,5 @@
 /home/yaziz/workspace/self_task/tracing basics/tracing-demo-v2/graphql-service/src/main/java/com/example/tracing/graphql/GraphqlServiceApplication.java
 /home/yaziz/workspace/self_task/tracing basics/tracing-demo-v2/graphql-service/src/main/java/com/example/tracing/graphql/OrderClient.java
 /home/yaziz/workspace/self_task/tracing basics/tracing-demo-v2/graphql-service/src/main/java/com/example/tracing/graphql/OrderController.java
+/home/yaziz/workspace/self_task/tracing basics/tracing-demo-v2/graphql-service/src/main/java/com/example/tracing/graphql/RestClientConfig.java
 /home/yaziz/workspace/self_task/tracing basics/tracing-demo-v2/graphql-service/src/main/java/com/example/tracing/graphql/TraceIdFilter.java
