@@ -1,0 +1,164 @@
+╔══════════════════════════════════════════════════════════════════════════╗
+║                  🎯 HOW TO VIEW TRACES IN GRAFANA                        ║
+╚══════════════════════════════════════════════════════════════════════════╝
+
+STEP 1: Open Grafana in Your Browser
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+URL: http://localhost:3000
+
+✓ No login required (anonymous access enabled)
+✓ Grafana v12.2.1 is running
+
+
+STEP 2: Navigate to Explore
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+1. Click the compass icon (🧭) on the left sidebar
+   Label: "Explore"
+
+2. You'll see the Explore interface
+
+
+STEP 3: Select Tempo Data Source
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+1. At the top of the page, find the dropdown that says "Select data source"
+2. Click it and select: "Tempo"
+
+
+STEP 4A: Search by Service Name (Easiest)
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+1. In the query builder, select the "Search" tab
+2. In the "Service Name" field, type: graphql-service
+3. Set time range to "Last 15 minutes" (top right)
+4. Click the blue "Run Query" button
+5. You'll see a list of traces - click any one to explore!
+
+
+STEP 4B: Search by Trace ID (Most Specific)
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+1. Run the test script: ./test_tracing_complete.sh
+2. Copy the trace ID from the output (e.g., 02f263e19b2fdbb4e7a40d57c9d32240)
+3. In Grafana Explore → Tempo
+4. Switch to "TraceQL" or "Trace ID" mode
+5. Paste the trace ID
+6. Click "Run Query"
+
+
+STEP 4C: Use TraceQL Query (Advanced)
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+1. Switch to "TraceQL" tab
+2. Enter query:
+   
+   { service.name="order-service" }
+   
+   Or to find slow traces:
+   
+   { duration > 500ms }
+
+3. Click "Run Query"
+
+
+STEP 5: Explore the Trace
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+Once you click on a trace, you'll see:
+
+┌─────────────────────────────────────────────────────────────┐
+│  TRACE WATERFALL VIEW                                       │
+├─────────────────────────────────────────────────────────────┤
+│                                                             │
+│  graphql-service ▼                                          │
+│  ├─ POST /graphql [200 OK] ──────────────── 150ms          │
+│  │                                                          │
+│  order-service ▼                                            │
+│  ├─ POST /api/orders [201 Created] ─────── 120ms           │
+│  │  ├─ database.query ───── 20ms                           │
+│  │  └─ rabbitmq.publish ─── 5ms                            │
+│                                                             │
+└─────────────────────────────────────────────────────────────┘
+
+What you can do:
+✓ Click on any span to see details (HTTP headers, status codes, etc.)
+✓ See which service took the most time
+✓ Identify bottlenecks and errors
+✓ View the full request flow across all services
+
+
+BONUS: View Service Metrics
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+Open these URLs directly in your browser:
+
+• GraphQL Service metrics:
+  http://localhost:8080/actuator/prometheus
+
+• Order Service metrics:
+  http://localhost:8081/actuator/prometheus
+
+• Inventory Service metrics:
+  http://localhost:8082/actuator/prometheus
+
+• Notification Service metrics:
+  http://localhost:8083/actuator/prometheus
+
+• RabbitMQ Management UI:
+  http://localhost:15672
+  Username: guest
+  Password: guest
+
+
+QUICK COMMANDS
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+# Generate a new trace by creating an order
+./test_tracing_complete.sh
+
+# View logs with trace correlation
+cat */logs/*.json.log | jq 'select(.traceId != null)'
+
+# Check if all services are running
+curl -s http://localhost:8080/actuator/health
+curl -s http://localhost:8081/actuator/health
+curl -s http://localhost:8082/actuator/health
+curl -s http://localhost:8083/actuator/health
+
+# Check Grafana status
+curl -s http://localhost:3000/api/health
+
+# Check Tempo status
+curl -s http://localhost:3200/status
+
+# View docker services
+docker compose ps
+
+
+TROUBLESHOOTING
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+Problem: No traces appearing in Tempo
+Solution:
+  • Wait 5-10 seconds after creating an order
+  • Check service logs for OTLP export errors
+  • Verify Tempo is running: docker compose ps tempo
+
+Problem: Grafana won't load
+Solution:
+  • Check if it's running: docker compose ps grafana
+  • Restart it: docker compose restart grafana
+  • View logs: docker compose logs grafana
+
+Problem: Different trace IDs between services
+Solution:
+  • This is expected for now - services generate their own traces
+  • To fix, ensure trace context propagation is configured
+  • See docs/tracing-demo/tracing_implementation.md
+
+
+DOCUMENTATION
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+📄 QUICK_START.md         - Quick start guide
+📄 GRAFANA_GUIDE.md       - Detailed Grafana usage guide  
+📄 docs/tracing-demo/     - Implementation details
+
+
+╔══════════════════════════════════════════════════════════════════════════╗
+║  🎉 You're all set! Open http://localhost:3000 and start exploring!     ║
+╚══════════════════════════════════════════════════════════════════════════╝
+

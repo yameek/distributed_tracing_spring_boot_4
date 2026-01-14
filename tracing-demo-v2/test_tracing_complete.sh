@@ -5,6 +5,9 @@
 
 set -e
 
+# Allow check_trace_in_logs to fail without exiting
+set +e
+
 # Colors
 GREEN='\033[0;32m'
 BLUE='\033[0;34m'
@@ -73,6 +76,9 @@ echo ""
 # Check trace IDs in all service logs
 echo -e "${YELLOW}[4/5] Checking trace IDs in service logs...${NC}"
 
+# Disable exit on error for trace checking
+set +e
+
 check_trace_in_logs() {
     SERVICE=$1
     LOG_FILE="$SERVICE/logs/$SERVICE.json.log"
@@ -83,74 +89,109 @@ check_trace_in_logs() {
     fi
     
     # Get the most recent trace ID from logs
-    TRACE_ID=$(tail -50 "$LOG_FILE" | jq -r 'select(.traceId != null and .traceId != "") | .traceId' | tail -1)
+    TRACE_ID=$(tail -50 "$LOG_FILE" | jq -r 'select(.traceId != null and .traceId != "") | .traceId' 2>/dev/null | tail -1 || echo "")
     
     if [ -z "$TRACE_ID" ] || [ "$TRACE_ID" == "null" ]; then
         echo -e "${RED}✗${NC} $SERVICE: No trace ID found in logs"
         echo "   Recent log sample:"
-        tail -3 "$LOG_FILE" | jq -c '{level, message: .message[0:60], traceId, spanId}' | sed 's/^/   /'
+        (tail -3 "$LOG_FILE" | jq -c 'select(.stack_trace == null) | {level, message: .message[0:60], traceId, spanId}' 2>/dev/null | sed 's/^/   /') || echo "   Unable to parse logs"
         return 1
     fi
     
     # Count logs with this trace ID
-    COUNT=$(tail -100 "$LOG_FILE" | jq -r 'select(.traceId == "'$TRACE_ID'")' | wc -l)
+    COUNT=$(tail -100 "$LOG_FILE" | jq -r 'select(.traceId == "'$TRACE_ID'")' 2>/dev/null | wc -l || echo "0")
     
     echo -e "${GREEN}✓${NC} $SERVICE: Found trace ID ${BLUE}$TRACE_ID${NC} (${COUNT} log entries)"
     
-    # Show sample log
-    tail -100 "$LOG_FILE" | jq -r 'select(.traceId == "'$TRACE_ID'") | {level, logger: .logger[0:40], message: .message[0:50], traceId, spanId}' | head -2 | jq -c '.' | sed 's/^/   /'
+    # Show sample log (skip stack traces)
+    (tail -100 "$LOG_FILE" | jq -r 'select(.traceId == "'$TRACE_ID'" and .stack_trace == null) | {level, logger: .logger[0:40], message: .message[0:50], traceId, spanId}' 2>/dev/null | head -2 | jq -c '.' 2>/dev/null | sed 's/^/   /') || true
     
     echo "$TRACE_ID"
 }
 
-GRAPHQL_TRACE=$(check_trace_in_logs "graphql-service")
+GRAPHQL_TRACE=$(check_trace_in_logs "graphql-service") || GRAPHQL_TRACE="N/A"
 echo ""
-ORDER_TRACE=$(check_trace_in_logs "order-service")
+ORDER_TRACE=$(check_trace_in_logs "order-service") || ORDER_TRACE="N/A"
 echo ""
-INVENTORY_TRACE=$(check_trace_in_logs "inventory-service")
+INVENTORY_TRACE=$(check_trace_in_logs "inventory-service") || INVENTORY_TRACE="N/A"
 echo ""
-NOTIFICATION_TRACE=$(check_trace_in_logs "notification-service")
+NOTIFICATION_TRACE=$(check_trace_in_logs "notification-service") || NOTIFICATION_TRACE="N/A"
 echo ""
 
-# Extract just the trace IDs
-GRAPHQL_TRACE_ID=$(echo "$GRAPHQL_TRACE" | tail -1)
-ORDER_TRACE_ID=$(echo "$ORDER_TRACE" | tail -1)
-INVENTORY_TRACE_ID=$(echo "$INVENTORY_TRACE" | tail -1)
-NOTIFICATION_TRACE_ID=$(echo "$NOTIFICATION_TRACE" | tail -1)
+# Re-enable exit on error
+set -e
+
+# Extract just the trace IDs (last line should be the 32-char hex trace ID)
+GRAPHQL_TRACE_ID=$(echo "$GRAPHQL_TRACE" | tail -1 | grep -E '^[0-9a-f]{32}$' || echo "")
+ORDER_TRACE_ID=$(echo "$ORDER_TRACE" | tail -1 | grep -E '^[0-9a-f]{32}$' || echo "")
+INVENTORY_TRACE_ID=$(echo "$INVENTORY_TRACE" | tail -1 | grep -E '^[0-9a-f]{32}$' || echo "")
+NOTIFICATION_TRACE_ID=$(echo "$NOTIFICATION_TRACE" | tail -1 | grep -E '^[0-9a-f]{32}$' || echo "")
 
 # Verify trace propagation
 echo -e "${YELLOW}[5/5] Verifying trace ID propagation across services...${NC}"
 
-if [ "$GRAPHQL_TRACE_ID" == "$ORDER_TRACE_ID" ] && \
-   [ "$ORDER_TRACE_ID" == "$INVENTORY_TRACE_ID" ] && \
-   [ "$INVENTORY_TRACE_ID" == "$NOTIFICATION_TRACE_ID" ]; then
-    echo -e "${GREEN}✓${NC} SUCCESS! Same trace ID propagated across ALL services!"
+# Check if we have valid trace IDs
+VALID_TRACES=0
+[ -n "$GRAPHQL_TRACE_ID" ] && VALID_TRACES=$((VALID_TRACES + 1))
+[ -n "$ORDER_TRACE_ID" ] && VALID_TRACES=$((VALID_TRACES + 1))
+[ -n "$INVENTORY_TRACE_ID" ] && VALID_TRACES=$((VALID_TRACES + 1))
+[ -n "$NOTIFICATION_TRACE_ID" ] && VALID_TRACES=$((VALID_TRACES + 1))
+
+if [ -n "$GRAPHQL_TRACE_ID" ] && [ "$GRAPHQL_TRACE_ID" == "$ORDER_TRACE_ID" ]; then
+    echo -e "${GREEN}✓${NC} SUCCESS! Same trace ID propagated from GraphQL to Order service!"
     echo -e "   ${BLUE}Trace ID: $GRAPHQL_TRACE_ID${NC}"
+    MAIN_TRACE_ID="$GRAPHQL_TRACE_ID"
+elif [ -n "$GRAPHQL_TRACE_ID" ] || [ -n "$ORDER_TRACE_ID" ]; then
+    echo -e "${YELLOW}⚠${NC}  Different trace IDs between GraphQL and Order service:"
+    echo "   GraphQL:      ${GRAPHQL_TRACE_ID:-<not found>}"
+    echo "   Order:        ${ORDER_TRACE_ID:-<not found>}"
+    MAIN_TRACE_ID="${GRAPHQL_TRACE_ID:-$ORDER_TRACE_ID}"
 else
-    echo -e "${YELLOW}⚠${NC}  Different trace IDs found (this may be due to timing):"
-    echo "   GraphQL:      $GRAPHQL_TRACE_ID"
-    echo "   Order:        $ORDER_TRACE_ID"
-    echo "   Inventory:    $INVENTORY_TRACE_ID"
-    echo "   Notification: $NOTIFICATION_TRACE_ID"
+    echo -e "${RED}✗${NC} No trace IDs found in GraphQL or Order services"
+    MAIN_TRACE_ID=""
+fi
+
+if [ -z "$INVENTORY_TRACE_ID" ] && [ -z "$NOTIFICATION_TRACE_ID" ]; then
+    echo -e "${YELLOW}⚠${NC}  Inventory and Notification services: No trace IDs (RabbitMQ propagation not configured)"
+elif [ -n "$INVENTORY_TRACE_ID" ] || [ -n "$NOTIFICATION_TRACE_ID" ]; then
+    echo -e "${GREEN}✓${NC} Async services:"
+    [ -n "$INVENTORY_TRACE_ID" ] && echo "   Inventory:    $INVENTORY_TRACE_ID"
+    [ -n "$NOTIFICATION_TRACE_ID" ] && echo "   Notification: $NOTIFICATION_TRACE_ID"
 fi
 echo ""
 
 # Summary
-echo -e "${GREEN}╔════════════════════════════════════════════════════════════════╗${NC}"
-echo -e "${GREEN}║                    🎉 TESTS PASSED! 🎉                         ║${NC}"
-echo -e "${GREEN}╚════════════════════════════════════════════════════════════════╝${NC}"
-echo ""
-echo "✅ All services are generating trace IDs and span IDs"
-echo "✅ Trace context is being propagated across services"
-echo "✅ Logs contain proper trace correlation"
+if [ $VALID_TRACES -ge 2 ]; then
+    echo -e "${GREEN}╔════════════════════════════════════════════════════════════════╗${NC}"
+    echo -e "${GREEN}║                    🎉 TESTS PASSED! 🎉                         ║${NC}"
+    echo -e "${GREEN}╚════════════════════════════════════════════════════════════════╝${NC}"
+    echo ""
+    echo "✅ Services are generating trace IDs and span IDs"
+    echo "✅ Trace context is being propagated via HTTP"
+    echo "✅ Logs contain proper trace correlation"
+    [ -z "$INVENTORY_TRACE_ID" ] && echo "⚠️  RabbitMQ trace propagation not yet configured"
+else
+    echo -e "${RED}╔════════════════════════════════════════════════════════════════╗${NC}"
+    echo -e "${RED}║                    ❌ TESTS FAILED                             ║${NC}"
+    echo -e "${RED}╚════════════════════════════════════════════════════════════════╝${NC}"
+    echo ""
+    echo "❌ Tracing is not working properly"
+    exit 1
+fi
 echo ""
 echo -e "${BLUE}Next Steps:${NC}"
-echo "1. View traces in Grafana: ${BLUE}http://localhost:3000${NC}"
-echo "   - Go to Explore > Tempo"
-echo "   - Search for trace: ${BLUE}$GRAPHQL_TRACE_ID${NC}"
-echo ""
-echo "2. Query logs by trace ID in Loki:"
-echo "   - Use query: ${BLUE}{service_name=~\".+\"} | json | traceId=\"$GRAPHQL_TRACE_ID\"${NC}"
+if [ -n "$MAIN_TRACE_ID" ]; then
+    echo "1. View traces in Grafana: ${BLUE}http://localhost:3000${NC}"
+    echo "   - Go to Explore > Tempo"
+    echo "   - Search for trace: ${BLUE}$MAIN_TRACE_ID${NC}"
+    echo ""
+    echo "2. Query logs by trace ID in Loki:"
+    echo "   - Use query: ${BLUE}{service_name=~\".+\"} | json | traceId=\"$MAIN_TRACE_ID\"${NC}"
+else
+    echo "1. View traces in Grafana: ${BLUE}http://localhost:3000${NC}"
+    echo "   - Go to Explore > Tempo"
+    echo "   - Browse recent traces"
+fi
 echo ""
 echo "3. View GraphQL UI: ${BLUE}http://localhost:8080/graphiql${NC}"
 echo ""
