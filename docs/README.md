@@ -1,79 +1,115 @@
 # Documentation
 
-This directory contains all project documentation organized by topic with clear naming conventions.
+This directory contains all documentation for the distributed tracing demo project.
 
-## Naming Conventions
+## Quick Navigation
 
-- `tracing_*` - Files related to the tracing demo implementation and concepts
-- `sdk_*` - Files related to SDK integration and development
+### 🚀 Start Here
+
+| Document | Description | When to Read |
+|----------|-------------|--------------|
+| **[PROJECT_RECREATION_GUIDE.md](PROJECT_RECREATION_GUIDE.md)** | ⭐ **Complete project recreation from scratch** | Building this project yourself |
+| **[IMPLEMENTATION_GUIDE.md](IMPLEMENTATION_GUIDE.md)** | Implementation concepts and patterns | Learning how distributed tracing works |
+| **[ARCHITECTURE.md](ARCHITECTURE.md)** | System architecture | Understanding the system design |
+| **[GOAL.md](GOAL.md)** | Project objectives | Understanding what this achieves |
+
+### 📖 Using the System
+
+| Document | Description | When to Read |
+|----------|-------------|--------------|
+| **[GRAFANA_GUIDE.md](GRAFANA_GUIDE.md)** | How to use Grafana for traces/logs | Viewing traces and debugging |
+| **[tracing-demo/tracing_access_instructions.md](tracing-demo/tracing_access_instructions.md)** | Access URLs and credentials | Accessing the services |
+| **[tracing-demo/tracing_visualization_guide.md](tracing-demo/tracing_visualization_guide.md)** | Understanding visualizations | Interpreting traces |
+
+### 🔧 Reference
+
+| Document | Description | When to Read |
+|----------|-------------|--------------|
+| **[STACK.md](STACK.md)** | Technology stack details | Understanding technologies used |
+| **[FIX_HISTORY.md](FIX_HISTORY.md)** | Common issues and fixes | Troubleshooting problems |
+| **[migration/tracing_java_25_migration.md](migration/tracing_java_25_migration.md)** | Java 25 migration notes | Migrating to Java 25 |
+
+### 📚 Additional Resources
+
+| Document | Description |
+|----------|-------------|
+| **[tracing-demo/tracing_quick_reference.md](tracing-demo/tracing_quick_reference.md)** | Quick reference for common patterns |
+| **[tracing-demo/tracing_trace_ids_explanation.md](tracing-demo/tracing_trace_ids_explanation.md)** | How trace IDs work |
+| **[tracing-demo/tracing_architecture_diagrams.md](tracing-demo/tracing_architecture_diagrams.md)** | Architecture diagrams |
 
 ## Directory Structure
 
-### `/tracing-demo/`
-Complete documentation for the tracing demo application:
-- `tracing_access_instructions.md` - How to access services and dashboards
-- `tracing_architecture_diagrams.md` - System architecture diagrams
-- `tracing_compilation_fix.md` - **Fix for compilation errors** ⚠️
-- `tracing_comprehensive_implementation_guide.md` - Detailed implementation guide
-- `tracing_demo_script.md` - Demo walkthrough script
-- `tracing_documentation_index.md` - Index of all demo documentation
-- `tracing_final_summary.txt` - Project summary
-- `tracing_implementation_summary.md` - Implementation summary
-- `tracing_implementation.md` - Core implementation details
-- `tracing_quick_reference.md` - Quick reference guide
-- `tracing_spring_boot_4_0_1_setup.md` - Spring Boot setup notes
-- `tracing_summary.md` - Overall summary
-- `tracing_system_status_report.md` - System status and health
-- `tracing_test_report_java25.md` - Java 25 test results
-- `tracing_trace_ids_explanation.md` - How trace IDs work
-- `tracing_visualization_guide.md` - Grafana visualization guide
-- `tracing_walkthrough.md` - Step-by-step walkthrough
+```
+docs/
+├── IMPLEMENTATION_GUIDE.md      # ⭐ Main implementation guide
+├── ARCHITECTURE.md              # System architecture
+├── GOAL.md                      # Project objectives
+├── STACK.md                     # Technology stack
+├── GRAFANA_GUIDE.md             # Grafana usage guide
+├── FIX_HISTORY.md               # Troubleshooting history
+│
+├── tracing-demo/                # Demo-specific documentation
+│   ├── tracing_access_instructions.md
+│   ├── tracing_architecture_diagrams.md
+│   ├── tracing_quick_reference.md
+│   ├── tracing_trace_ids_explanation.md
+│   └── tracing_visualization_guide.md
+│
+└── migration/                   # Migration documentation
+    └── tracing_java_25_migration.md
+```
 
-### `/sdk-integration/`
-SDK integration documentation:
-- `sdk_quick_start_integration.md` - Quick start for SDK integration
-- `sdk_readme_integration.md` - Main SDK integration README
-- `sdk_integration_summary.md` - Summary of SDK integration approaches
+## Documentation Philosophy
 
-### `/migration/`
-Migration-related documentation:
-- `tracing_migration_comparison.md` - Comparison of migration approaches
-- `tracing_java_25_migration.md` - Java 25 migration guide
-- `tracing_migration_complete.md` - Migration completion notes
+This documentation follows these principles:
 
-### `/planning/`
-Planning and design documents:
-- `sdk_integration_plan.md` - Integration plan for tracing SDK
-- `sdk_plan.md` - Overall SDK plan
+1. **Self-explanatory** - Each guide should be complete and standalone
+2. **Practical** - Focus on working code examples
+3. **Minimal** - Keep only essential documentation
+4. **Current** - Remove obsolete or redundant files
 
-### `/planned_sdk_doc/`
-Planned SDK documentation structure:
-- `/new_doc/` - New documentation format
-- `/wiki/` - Wiki-style documentation
+## Recommended Reading Order
 
-### Root Level Docs
-- `micrometer_tracing_explanation.md` - Explanation of Micrometer tracing
-- `tracing_cleanup_summary.md` - Summary of cleanup activities
-- `tracing_documentation_map.md` - Map of all documentation
-- `tracing_final_recommendation.md` - Final recommendations
-- `tracing_why_integrate_vs_standalone.md` - Integration vs standalone comparison
+### For First-Time Users
+1. Read [GOAL.md](GOAL.md) - understand what this project does
+2. Read [ARCHITECTURE.md](ARCHITECTURE.md) - see how it works
+3. Follow [IMPLEMENTATION_GUIDE.md](IMPLEMENTATION_GUIDE.md) - learn implementation details
+4. Use [GRAFANA_GUIDE.md](GRAFANA_GUIDE.md) - explore traces
 
-## Quick Links
+### For Implementing in Your Project
+1. Read [IMPLEMENTATION_GUIDE.md](IMPLEMENTATION_GUIDE.md) - step-by-step guide
+2. Check [tracing-demo/tracing_quick_reference.md](tracing-demo/tracing_quick_reference.md) - code snippets
+3. Reference [FIX_HISTORY.md](FIX_HISTORY.md) - common issues
 
-### Getting Started
-1. **Quick Start**: [`/tracing-demo/tracing_quick_reference.md`](./tracing-demo/tracing_quick_reference.md)
-2. **Demo Script**: [`/tracing-demo/tracing_demo_script.md`](./tracing-demo/tracing_demo_script.md)
-3. **Access Instructions**: [`/tracing-demo/tracing_access_instructions.md`](./tracing-demo/tracing_access_instructions.md)
+### For Troubleshooting
+1. Check [FIX_HISTORY.md](FIX_HISTORY.md) first
+2. Review [IMPLEMENTATION_GUIDE.md](IMPLEMENTATION_GUIDE.md) section 8
+3. Use [GRAFANA_GUIDE.md](GRAFANA_GUIDE.md) for debugging
 
-### Implementation Details
-- **Implementation Guide**: [`/tracing-demo/tracing_comprehensive_implementation_guide.md`](./tracing-demo/tracing_comprehensive_implementation_guide.md)
-- **Architecture**: [`/tracing-demo/tracing_architecture_diagrams.md`](./tracing-demo/tracing_architecture_diagrams.md)
-- **Visualization**: [`/tracing-demo/tracing_visualization_guide.md`](./tracing-demo/tracing_visualization_guide.md)
+## Key Concepts
 
-### SDK Integration
-- **SDK Quick Start**: [`/sdk-integration/sdk_quick_start_integration.md`](./sdk-integration/sdk_quick_start_integration.md)
-- **SDK Plan**: [`/planning/sdk_plan.md`](./planning/sdk_plan.md)
+### Distributed Tracing
+A **trace** represents the complete journey of a request through your system. Each operation within a trace is called a **span**. Spans are connected by parent-child relationships, forming a trace tree.
+
+### Trace Propagation
+**Trace context** (trace ID and span ID) must be propagated between services. This happens:
+- Via HTTP headers for REST/GraphQL calls
+- Via message headers for RabbitMQ
+- Automatically when using instrumented clients
+
+### Observability Stack
+- **Tempo**: Stores traces
+- **Loki**: Stores logs
+- **Grafana**: Visualizes both
+- **OpenTelemetry**: Generates and exports telemetry
+
+## Getting Help
+
+- **Implementation questions**: See [IMPLEMENTATION_GUIDE.md](IMPLEMENTATION_GUIDE.md)
+- **Common issues**: See [FIX_HISTORY.md](FIX_HISTORY.md)
+- **Architecture questions**: See [ARCHITECTURE.md](ARCHITECTURE.md)
+- **Grafana usage**: See [GRAFANA_GUIDE.md](GRAFANA_GUIDE.md)
 
 ## Main Project
 
-The main project code is located in `/tracing-demo-v2/` at the root level.
+The actual code is in [`/tracing-demo-v2/`](../tracing-demo-v2/) at the project root.
