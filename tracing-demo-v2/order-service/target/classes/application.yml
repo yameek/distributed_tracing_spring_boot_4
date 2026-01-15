@@ -32,22 +32,26 @@ management:
       export:
         otlp:
           enabled: true
-          transport: http
-          # Use the base endpoint - the exporter will append the correct path
-          endpoint: http://localhost:4318
+          # Use gRPC instead of HTTP for better compatibility
+          transport: grpc
+          # Tempo's OTLP gRPC endpoint
+          endpoint: http://localhost:4317
     metrics:
       export:
         otlp:
-          enabled: true
-          transport: http
-          endpoint: http://localhost:4318
-          # Increase step duration to reduce export frequency and errors
-          step: 60s
+          # Disable metrics export - Tempo doesn't accept metrics via OTLP
+          # Use Prometheus endpoint instead at /actuator/prometheus
+          enabled: false
     logging:
       export:
         otlp:
+          # Disable log export - we're using file-based logging
           enabled: false
-          # Disable log export as we're using file-based logging
+  # Also disable the default OTLP metrics registry
+  otlp:
+    metrics:
+      export:
+        enabled: false
 
 logging:
   pattern:
