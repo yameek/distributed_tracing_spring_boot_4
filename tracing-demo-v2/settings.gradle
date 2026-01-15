@@ -1,0 +1,6 @@
+rootProject.name = 'tracing-demo'
+
+include 'order-service'
+include 'graphql-service'
+include 'inventory-service'
+include 'notification-service'

@@ -7,7 +7,9 @@ RED='\033[0;31m'
 NC='\033[0m' # No Color
 
 echo -e "${BLUE}>>> Starting Distributed Tracing Demo System (v2) with Spring Boot 4.0.1 <<<${NC}"
+echo -e "${BLUE}>>> Java 25 + Gradle 9.2.1 + Groovy DSL <<<${NC}"
 echo "Java version: $(java -version 2>&1 | head -1)"
+echo "Gradle version: $(./gradlew --version | grep "Gradle" | head -1)"
 
 # 0. Stop any existing services for a fresh start
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
@@ -30,27 +32,23 @@ cleanup() {
 }
 trap cleanup EXIT
 
-# 2. Start Services (Maven)
+# 2. Start Services (Gradle)
 echo "Using Java: $(java -version 2>&1 | head -1)"
 
 start_service() {
     SERVICE_NAME=$1
     PORT=$2
-    echo -e "${GREEN}Starting $SERVICE_NAME on port $PORT using Maven...${NC}"
-    cd "$SERVICE_NAME"
-    mvn -q spring-boot:run > "../logs/$SERVICE_NAME.log" 2>&1 &
-    cd ..
+    echo -e "${GREEN}Starting $SERVICE_NAME on port $PORT using Gradle...${NC}"
+    ./gradlew :$SERVICE_NAME:bootRun > "logs/$SERVICE_NAME.log" 2>&1 &
 }
 
 # Create logs directory
 mkdir -p logs
 touch logs/graphql-service.log logs/order-service.log logs/inventory-service.log logs/notification-service.log
 
-# Pre-warm Maven (download dependencies once to avoid concurrency lock)
-echo -e "${BLUE}Downloading/Verifying Maven Dependencies (First run may take time)...${NC}"
-cd graphql-service
-mvn -q dependency:go-offline > /dev/null 2>&1
-cd ..
+# Pre-build all services (download dependencies once to avoid concurrency issues)
+echo -e "${BLUE}Building services with Gradle (First run may take time)...${NC}"
+./gradlew build -x test > /dev/null 2>&1
 
 start_service "graphql-service" 8080
 start_service "order-service" 8081

@@ -9,10 +9,11 @@ NC='\033[0m' # No Color
 
 echo -e "${BLUE}=== Stopping All Services ===${NC}"
 
-# Stop all Maven Spring Boot processes
-echo -e "${YELLOW}Stopping Maven Spring Boot services...${NC}"
-pkill -f "mvn.*spring-boot:run" 2>/dev/null
-pkill -f "spring-boot:run" 2>/dev/null
+# Stop all Gradle Spring Boot processes
+echo -e "${YELLOW}Stopping Gradle Spring Boot services...${NC}"
+pkill -f "gradle.*bootRun" 2>/dev/null
+pkill -f "gradlew.*bootRun" 2>/dev/null
+pkill -f "GradleDaemon" 2>/dev/null
 
 # Stop Java processes for our services
 echo -e "${YELLOW}Stopping Java service processes...${NC}"
