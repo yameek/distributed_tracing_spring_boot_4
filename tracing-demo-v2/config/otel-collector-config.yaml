@@ -1,0 +1,65 @@
+# OpenTelemetry Collector Configuration
+# This collector acts as an intermediary between your services and the tracing backend
+# Benefits:
+# - Vendor independence: Switch backends (Tempo, Jaeger, Zipkin) without changing service code
+# - Centralized configuration: All export logic in one place
+# - Processing capabilities: Add sampling, filtering, enrichment as needed
+# - Multiple backends: Send traces to multiple destinations simultaneously
+
+receivers:
+  # OTLP receiver - accepts traces from your services
+  otlp:
+    protocols:
+      grpc:
+        endpoint: 0.0.0.0:4317
+      http:
+        endpoint: 0.0.0.0:4318
+
+processors:
+  # Batch processor - batches spans for efficient export
+  batch:
+    timeout: 1s
+    send_batch_size: 1024
+  
+  # Memory limiter - prevents OOM by dropping data if memory usage is too high
+  memory_limiter:
+    check_interval: 1s
+    limit_mib: 512
+    spike_limit_mib: 128
+
+exporters:
+  # Tempo exporter - currently configured for Tempo
+  # To switch backends, just add/modify exporters here
+  otlp:
+    endpoint: tempo:4317
+    tls:
+      insecure: true
+  
+  # Example: Add Jaeger exporter (commented out)
+  # jaeger:
+  #   endpoint: jaeger:14250
+  #   tls:
+  #     insecure: true
+  
+  # Example: Add Zipkin exporter (commented out)
+  # zipkin:
+  #   endpoint: http://zipkin:9411/api/v2/spans
+  
+  # Debug exporter - useful for debugging (replaces deprecated logging exporter)
+  debug:
+    verbosity: normal
+
+service:
+  pipelines:
+    traces:
+      receivers: [otlp]
+      processors: [memory_limiter, batch]
+      exporters: [otlp, debug]
+      # To send to multiple backends, add them here:
+      # exporters: [otlp, jaeger, debug]
+  
+  telemetry:
+    logs:
+      level: info
+    metrics:
+      level: detailed

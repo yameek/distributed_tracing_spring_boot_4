@@ -14,6 +14,7 @@ A production-ready implementation of distributed tracing using Spring Boot 4.0.1
 - **Architecture Diagrams**: [`docs/tracing-demo/tracing_architecture_diagrams.md`](../docs/tracing-demo/tracing_architecture_diagrams.md)
 - **Migration Notes**: [`docs/migration/tracing_java_25_migration.md`](../docs/migration/tracing_java_25_migration.md)
 - **Complete Documentation Index**: [`docs/README.md`](../docs/README.md)
+- **🆕 OpenTelemetry Collector Guide**: [`COLLECTOR_GUIDE.md`](COLLECTOR_GUIDE.md) - Learn how to switch backends without code changes!
 
 ## Architecture
 
@@ -25,9 +26,21 @@ A production-ready implementation of distributed tracing using Spring Boot 4.0.1
 ## Infrastructure
 
 - **RabbitMQ** - Message broker (Ports 5672, 15672)
-- **Tempo** - Distributed tracing backend (Ports 3200, 4317, 4318, 9411)
+- **OpenTelemetry Collector** - Trace collection & routing (Ports 4317, 4318, 8888)
+- **Tempo** - Distributed tracing backend (Port 3200)
 - **Loki** - Log aggregation (Port 3100)
 - **Grafana** - Visualization (Port 3000)
+
+### Why OpenTelemetry Collector?
+
+This project uses an **OpenTelemetry Collector** as an intermediary between services and the tracing backend. This provides:
+
+- ✅ **Vendor Independence**: Switch between Tempo, Jaeger, Zipkin, or any backend without changing service code
+- ✅ **Centralized Configuration**: All export logic in one place
+- ✅ **Multiple Backends**: Send traces to multiple destinations simultaneously
+- ✅ **Processing Capabilities**: Sampling, filtering, enrichment, batching
+
+See [`COLLECTOR_GUIDE.md`](COLLECTOR_GUIDE.md) for details on switching backends.
 
 ## Prerequisites
 
@@ -87,6 +100,16 @@ bash test_system.sh
 ```
 
 This sends a GraphQL mutation and saves the response to `response.json`.
+
+### 5. Test the Collector (Optional)
+
+Verify that the OpenTelemetry Collector is working correctly:
+
+```bash
+bash test_collector.sh
+```
+
+This will check that traces are flowing through the collector to Tempo.
 
 ## View Traces
 
