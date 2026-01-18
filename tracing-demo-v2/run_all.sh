@@ -44,7 +44,7 @@ start_service() {
 
 # Create logs directory
 mkdir -p logs
-touch logs/graphql-service.log logs/order-service.log logs/inventory-service.log logs/notification-service.log
+touch logs/graphql-service.log logs/order-service.log logs/inventory-service.log logs/notification-service.log logs/cqrs-service.log
 
 # Pre-build all services (download dependencies once to avoid concurrency issues)
 echo -e "${BLUE}Building services with Gradle (First run may take time)...${NC}"
@@ -54,10 +54,12 @@ start_service "graphql-service" 8080
 start_service "order-service" 8081
 start_service "inventory-service" 8082
 start_service "notification-service" 8083
+start_service "cqrs-service" 8084
 
 echo -e "${BLUE}>>> All services are starting in the background! <<<${NC}"
 echo -e "Logs are being written to the './logs' directory."
 echo -e "GraphQL UI:    http://localhost:8080/graphiql"
+echo -e "CQRS Service:  http://localhost:8084/api/products"
 echo -e "Grafana:       http://localhost:3000"
 echo -e "${RED}Press [CTRL+C] to stop all services.${NC}"
 

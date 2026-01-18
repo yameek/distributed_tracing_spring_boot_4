@@ -34,12 +34,13 @@ check_service() {
     fi
 }
 
-echo -e "${YELLOW}[1/5] Checking if all services are running...${NC}"
+echo -e "${YELLOW}[1/6] Checking if all services are running...${NC}"
 ALL_RUNNING=true
 check_service "GraphQL Service    " 8080 || ALL_RUNNING=false
 check_service "Order Service      " 8081 || ALL_RUNNING=false
 check_service "Inventory Service  " 8082 || ALL_RUNNING=false
 check_service "Notification Service" 8083 || ALL_RUNNING=false
+check_service "CQRS Service       " 8084 || ALL_RUNNING=false
 
 if [ "$ALL_RUNNING" = false ]; then
     echo ""
@@ -50,7 +51,7 @@ fi
 echo ""
 
 # Test GraphQL endpoint
-echo -e "${YELLOW}[2/5] Testing GraphQL endpoint (creates order via all services)...${NC}"
+echo -e "${YELLOW}[2/6] Testing GraphQL endpoint (creates order via all services)...${NC}"
 RESPONSE=$(curl -s -X POST http://localhost:8080/graphql \
   -H "Content-Type: application/json" \
   -d '{"query":"mutation { createOrder(productId: \"test-laptop\", quantity: 5) { orderId status message } }"}')
@@ -69,12 +70,37 @@ echo -e "${GREEN}✓${NC} Order created successfully: ${BLUE}$ORDER_ID${NC}"
 echo ""
 
 # Wait for logs to be written
-echo -e "${YELLOW}[3/5] Waiting for logs to be written...${NC}"
+echo -e "${YELLOW}[3/6] Waiting for logs to be written...${NC}"
 sleep 2
 echo ""
 
+# Test CQRS Service
+echo -e "${YELLOW}[4/6] Testing CQRS Service (creates product)...${NC}"
+CQRS_RESPONSE=$(curl -s -X POST http://localhost:8084/api/products \
+  -H "Content-Type: application/json" \
+  -d '{
+    "name": "Test Laptop",
+    "description": "High-performance laptop for testing",
+    "price": 1299.99,
+    "initialStock": 10
+  }')
+
+echo "$CQRS_RESPONSE" | jq '.' 2>/dev/null || echo "$CQRS_RESPONSE"
+
+PRODUCT_ID=$(echo "$CQRS_RESPONSE" | jq -r '.productId' 2>/dev/null || echo "")
+
+if [ -n "$PRODUCT_ID" ] && [ "$PRODUCT_ID" != "null" ]; then
+    echo -e "${GREEN}✓${NC} Product created successfully: ${BLUE}$PRODUCT_ID${NC}"
+else
+    echo -e "${YELLOW}⚠${NC}  CQRS Service response: $CQRS_RESPONSE"
+fi
+echo ""
+
+# Wait for logs
+sleep 2
+
 # Check trace IDs in all service logs
-echo -e "${YELLOW}[4/5] Checking trace IDs in service logs...${NC}"
+echo -e "${YELLOW}[5/6] Checking trace IDs in service logs...${NC}"
 
 # Disable exit on error for trace checking
 set +e
@@ -118,6 +144,18 @@ echo ""
 NOTIFICATION_TRACE=$(check_trace_in_logs "notification-service") || NOTIFICATION_TRACE="N/A"
 echo ""
 
+# Check CQRS service logs if they exist
+if [ -f "logs/cqrs-service.log" ]; then
+    echo "Checking CQRS service logs..."
+    if grep -q "traceId" logs/cqrs-service.log 2>/dev/null; then
+        CQRS_TRACE_ID=$(grep "traceId" logs/cqrs-service.log | tail -1 | grep -oE '[0-9a-f]{32}' | head -1 || echo "")
+        if [ -n "$CQRS_TRACE_ID" ]; then
+            echo -e "${GREEN}✓${NC} CQRS Service: Found trace ID ${BLUE}$CQRS_TRACE_ID${NC}"
+        fi
+    fi
+fi
+echo ""
+
 # Re-enable exit on error
 set -e
 
@@ -128,7 +166,7 @@ INVENTORY_TRACE_ID=$(echo "$INVENTORY_TRACE" | tail -1 | grep -E '^[0-9a-f]{32}$
 NOTIFICATION_TRACE_ID=$(echo "$NOTIFICATION_TRACE" | tail -1 | grep -E '^[0-9a-f]{32}$' || echo "")
 
 # Verify trace propagation
-echo -e "${YELLOW}[5/5] Verifying trace ID propagation across services...${NC}"
+echo -e "${YELLOW}[6/6] Verifying trace ID propagation across services...${NC}"
 
 # Check if we have valid trace IDs
 VALID_TRACES=0
@@ -194,4 +232,5 @@ else
 fi
 echo ""
 echo "3. View GraphQL UI: ${BLUE}http://localhost:8080/graphiql${NC}"
+echo "4. View CQRS Service: ${BLUE}http://localhost:8084/api/products${NC}"
 echo ""
