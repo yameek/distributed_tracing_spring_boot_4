@@ -10,6 +10,22 @@ services:
       timeout: 5s
       retries: 5
 
+  postgres:
+    image: postgres:16
+    environment:
+      POSTGRES_DB: cqrs_db
+      POSTGRES_USER: postgres
+      POSTGRES_PASSWORD: postgres
+    ports:
+      - "5432:5432"
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U postgres"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+
   # OpenTelemetry Collector - receives traces from services and forwards to backend
   otel-collector:
     image: otel/opentelemetry-collector-contrib:latest
@@ -58,3 +74,6 @@ services:
     depends_on:
       - tempo
       - loki
+
+volumes:
+  postgres_data:
