@@ -1,84 +1,68 @@
 #!/bin/bash
 
-# Quick test to verify trace IDs are appearing in logs
+# Quick Test - Tests basic functionality of all services
 
-echo "🧪 Quick Tracing Verification Test"
-echo "======================================"
+# Colors for output
+GREEN='\033[0;32m'
+BLUE='\033[0;34m'
+YELLOW='\033[1;33m'
+RED='\033[0;31m'
+NC='\033[0m' # No Color
+
+echo "================================================"
+echo "  Quick System Test"
+echo "================================================"
 echo ""
 
-# Test order service directly
-echo "1. Creating order via order-service..."
-ORDER_RESPONSE=$(curl -s -X POST http://localhost:8081/orders \
+# Function to check if a service is running
+check_service() {
+    local SERVICE_NAME=$1
+    local PORT=$2
+    local ENDPOINT=$3
+    
+    echo -n "Checking $SERVICE_NAME... "
+    if curl -s -f "$ENDPOINT" > /dev/null 2>&1; then
+        echo -e "${GREEN}✓${NC}"
+        return 0
+    else
+        echo -e "${RED}✗${NC}"
+        return 1
+    fi
+}
+
+echo -e "${BLUE}Checking Services:${NC}"
+check_service "GraphQL" 8080 "http://localhost:8080/graphiql"
+check_service "Order" 8081 "http://localhost:8081/actuator/health"
+check_service "Inventory" 8082 "http://localhost:8082/actuator/health"
+check_service "Notification" 8083 "http://localhost:8083/actuator/health"
+check_service "CQRS" 8084 "http://localhost:8084/api/products"
+check_service "Orchestrator" 8085 "http://localhost:8085/api/workflows/health"
+
+echo ""
+echo -e "${BLUE}Testing GraphQL Order Creation:${NC}"
+RESPONSE=$(curl -s -X POST http://localhost:8080/graphql \
   -H "Content-Type: application/json" \
-  -d '{"product":"test-laptop","quantity":3}')
+  -d '{"query": "mutation { createOrder(productId: \"LAPTOP-001\", quantity: 1) { orderId status } }"}')
 
-ORDER_ID=$(echo "$ORDER_RESPONSE" | jq -r '.orderId')
-echo "   ✓ Order created: $ORDER_ID"
-echo ""
-
-# Wait for log
-sleep 1
-
-# Check trace ID in order service logs
-echo "2. Checking trace ID in order-service logs..."
-TRACE_DATA=$(tail -10 order-service/logs/order-service.json.log | \
-  jq -r 'select(.traceId != null and .traceId != "") | {level, message: .message[0:60], traceId, spanId}' | \
-  tail -1)
-
-if [ -z "$TRACE_DATA" ]; then
-    echo "   ✗ No trace data found"
-    exit 1
+ORDER_ID=$(echo "$RESPONSE" | jq -r '.data.createOrder.orderId')
+if [ -n "$ORDER_ID" ] && [ "$ORDER_ID" != "null" ]; then
+    echo -e "${GREEN}✓ Order created: $ORDER_ID${NC}"
+else
+    echo -e "${RED}✗ Failed to create order${NC}"
 fi
 
-echo "$TRACE_DATA" | jq '.'
+echo ""
+echo -e "${BLUE}Testing CQRS Product Creation:${NC}"
+RESPONSE=$(curl -s -X POST http://localhost:8084/api/products \
+  -H "Content-Type: application/json" \
+  -d '{"name": "Quick Test Laptop", "description": "Test", "price": 999.99, "initialStock": 10}')
 
-TRACE_ID=$(echo "$TRACE_DATA" | jq -r '.traceId')
-
-if [ "$TRACE_ID" == "null" ] || [ -z "$TRACE_ID" ]; then
-    echo "   ✗ FAILED: No trace ID!"
-    exit 1
+PRODUCT_ID=$(echo "$RESPONSE" | jq -r '.productId')
+if [ -n "$PRODUCT_ID" ] && [ "$PRODUCT_ID" != "null" ]; then
+    echo -e "${GREEN}✓ Product created: $PRODUCT_ID${NC}"
+else
+    echo -e "${RED}✗ Failed to create product${NC}"
 fi
 
 echo ""
-echo "✅ SUCCESS! Trace ID found: $TRACE_ID"
-echo ""
-
-# Test GraphQL
-echo "3. Creating order via GraphQL..."
-GQL_RESPONSE=$(curl -s -X POST http://localhost:8080/graphql \
-  -H "Content-Type: application/json" \
-  -d '{"query":"mutation { createOrder(productId: \"laptop\", quantity: 2) { orderId status } }"}')
-
-GQL_ORDER_ID=$(echo "$GQL_RESPONSE" | jq -r '.data.createOrder.orderId')
-echo "   ✓ GraphQL order created: $GQL_ORDER_ID"
-echo ""
-
-sleep 1
-
-# Check GraphQL trace
-echo "4. Checking trace ID in graphql-service logs..."
-GQL_TRACE_DATA=$(tail -10 graphql-service/logs/graphql-service.json.log | \
-  jq -r 'select(.message | contains("GraphQL")) | {level, message: .message[0:60], traceId, spanId}' | \
-  tail -1)
-
-echo "$GQL_TRACE_DATA" | jq '.'
-
-GQL_TRACE_ID=$(echo "$GQL_TRACE_DATA" | jq -r '.traceId')
-
-echo ""
-echo "✅ SUCCESS! GraphQL trace ID: $GQL_TRACE_ID"
-echo ""
-echo "=========================================="
-echo "🎉 OpenTelemetry Tracing is WORKING!"
-echo "=========================================="
-echo ""
-echo "Key Points:"
-echo "  ✓ Trace IDs appear in logs"
-echo "  ✓ Span IDs appear in logs"
-echo "  ✓ MDC injection is working"
-echo "  ✓ Spring Boot 4 OpenTelemetry starter is functional"
-echo ""
-echo "View in Grafana:"
-echo "  - Grafana: http://localhost:3000"
-echo "  - Tempo: Search for trace: $TRACE_ID"
-echo ""
+echo -e "${GREEN}Quick test complete!${NC}"

@@ -7,10 +7,18 @@ A production-ready implementation of distributed tracing using Spring Boot 4.0.1
 
 ## 🆕 Latest Updates
 
+- **🎯 HTTP + RabbitMQ Distributed Tracing Demo** - NEW! See how a single trace ID flows across protocols
+  - 🚀 [Quick Start](../docs/tracing-demo-v2/QUICK_START_HTTP_RABBITMQ.md) - Get started in 5 minutes
+  - 📖 [Complete Guide](../docs/tracing-demo-v2/DISTRIBUTED_TRACING_GUIDE.md) - Comprehensive guide with examples
+  - 📊 [Implementation Summary](../docs/tracing-demo-v2/HTTP_RABBITMQ_TRACING_SUMMARY.md) - What was built and how it works
+  - 🎨 [Trace Flow Diagram](../docs/tracing-demo-v2/TRACE_FLOW_DIAGRAM.md) - Visual representation of trace propagation
+  - 🧪 [Testing Guide](../docs/tracing-demo-v2/TESTING_GUIDE.md) - Complete testing documentation
+  - ✅ [Updates Summary](../docs/tracing-demo-v2/UPDATES_SUMMARY.md) - Latest changes and improvements
+
 - **@Observed Annotation Migration** - All services migrated from manual span creation to `@Observed` annotation
-  - 📖 [Migration Guide](./OBSERVED_ANNOTATION_MIGRATION_GUIDE.md) - Complete migration guide with examples
-  - ⚡ [Quick Reference](./OBSERVED_QUICK_REFERENCE.md) - Quick reference for developers
-  - 📊 [Migration Summary](./MIGRATION_SUMMARY.md) - What changed and why
+  - 📖 [Migration Guide](../docs/tracing-demo-v2/OBSERVED_ANNOTATION_MIGRATION_GUIDE.md) - Complete migration guide with examples
+  - ⚡ [Quick Reference](../docs/tracing-demo-v2/OBSERVED_QUICK_REFERENCE.md) - Quick reference for developers
+  - 📊 [Migration Summary](../docs/tracing-demo-v2/MIGRATION_SUMMARY.md) - What changed and why
 
 ## Documentation
 
@@ -22,14 +30,19 @@ A production-ready implementation of distributed tracing using Spring Boot 4.0.1
 - **Architecture Diagrams**: [`docs/tracing-demo/tracing_architecture_diagrams.md`](../docs/tracing-demo/tracing_architecture_diagrams.md)
 - **Migration Notes**: [`docs/migration/tracing_java_25_migration.md`](../docs/migration/tracing_java_25_migration.md)
 - **Complete Documentation Index**: [`docs/README.md`](../docs/README.md)
-- **🆕 OpenTelemetry Collector Guide**: [`COLLECTOR_GUIDE.md`](COLLECTOR_GUIDE.md) - Learn how to switch backends without code changes!
+- **🆕 OpenTelemetry Collector Guide**: [`docs/tracing-demo-v2/COLLECTOR_GUIDE.md`](../docs/tracing-demo-v2/COLLECTOR_GUIDE.md) - Learn how to switch backends without code changes!
 
 ## Architecture
 
+### Core Services
 - **GraphQL Service** (Port 8080) - Entry point, receives GraphQL mutations
 - **Order Service** (Port 8081) - REST service, processes orders and publishes to RabbitMQ
 - **Inventory Service** (Port 8082) - RabbitMQ consumer, updates inventory
 - **Notification Service** (Port 8083) - RabbitMQ consumer, sends notifications
+
+### Advanced Demos
+- **CQRS Service** (Port 8084) - Command Query Responsibility Segregation with Event Sourcing
+- **🆕 Orchestrator Service** (Port 8085) - Demonstrates HTTP + RabbitMQ distributed tracing
 
 ## Infrastructure
 
@@ -48,7 +61,65 @@ This project uses an **OpenTelemetry Collector** as an intermediary between serv
 - ✅ **Multiple Backends**: Send traces to multiple destinations simultaneously
 - ✅ **Processing Capabilities**: Sampling, filtering, enrichment, batching
 
-See [`COLLECTOR_GUIDE.md`](COLLECTOR_GUIDE.md) for details on switching backends.
+See [`docs/tracing-demo-v2/COLLECTOR_GUIDE.md`](../docs/tracing-demo-v2/COLLECTOR_GUIDE.md) for details on switching backends.
+
+## Quick Start
+
+1. **Start Infrastructure**:
+   ```bash
+   docker compose up -d
+   ```
+
+2. **Start All Services**:
+   ```bash
+   ./run_all.sh
+   ```
+   
+   Wait 60-90 seconds for all services to start.
+
+3. **Test the System**:
+   ```bash
+   # Comprehensive system test
+   ./test_complete_system.sh
+   
+   # Or quick health check
+   ./quick_test.sh
+   
+   # Or distributed tracing demo
+   ./test_distributed_tracing.sh
+   ```
+
+4. **View Traces** in Grafana:
+   - Open http://localhost:3000
+   - Navigate to Explore → Tempo
+   - Search for the trace ID from test output
+
+5. **Stop All Services**:
+   ```bash
+   ./stop_all.sh
+   ```
+
+## Testing
+
+### Available Test Scripts
+
+- **`./test_complete_system.sh`** - Comprehensive test of all services and features
+- **`./test_distributed_tracing.sh`** - HTTP + RabbitMQ distributed tracing demo
+- **`./quick_test.sh`** - Quick health check of all services
+- **`./test_cqrs_service.sh`** - CQRS service specific tests
+- **`./test_system.sh`** - Core services tests
+
+### What Gets Tested
+
+✅ Infrastructure (Docker services)  
+✅ All 6 application services  
+✅ GraphQL → Order → Inventory/Notification flow  
+✅ CQRS service CRUD operations  
+✅ Distributed tracing (HTTP + RabbitMQ)  
+✅ Trace ID propagation  
+✅ Log correlation  
+
+See [TESTING_GUIDE.md](../docs/tracing-demo-v2/TESTING_GUIDE.md) for complete testing documentation.
 
 ## Prerequisites
 

@@ -21,24 +21,28 @@ pkill -f "GraphqlServiceApplication" 2>/dev/null
 pkill -f "OrderServiceApplication" 2>/dev/null
 pkill -f "InventoryServiceApplication" 2>/dev/null
 pkill -f "NotificationServiceApplication" 2>/dev/null
+pkill -f "CqrsServiceApplication" 2>/dev/null
+pkill -f "OrchestratorServiceApplication" 2>/dev/null
 
 # Wait a bit for processes to terminate
 sleep 3
 
 # Check if any processes are still running
-RUNNING=$(ps aux | grep -E "GraphqlServiceApplication|OrderServiceApplication|InventoryServiceApplication|NotificationServiceApplication" | grep -v grep | wc -l)
+RUNNING=$(ps aux | grep -E "GraphqlServiceApplication|OrderServiceApplication|InventoryServiceApplication|NotificationServiceApplication|CqrsServiceApplication|OrchestratorServiceApplication" | grep -v grep | wc -l)
 if [ "$RUNNING" -gt 0 ]; then
     echo -e "${YELLOW}Some processes still running, force killing...${NC}"
     pkill -9 -f "GraphqlServiceApplication" 2>/dev/null
     pkill -9 -f "OrderServiceApplication" 2>/dev/null
     pkill -9 -f "InventoryServiceApplication" 2>/dev/null
     pkill -9 -f "NotificationServiceApplication" 2>/dev/null
+    pkill -9 -f "CqrsServiceApplication" 2>/dev/null
+    pkill -9 -f "OrchestratorServiceApplication" 2>/dev/null
     sleep 2
 fi
 
 # Verify ports are free
 echo -e "${YELLOW}Checking ports...${NC}"
-for port in 8080 8081 8082 8083; do
+for port in 8080 8081 8082 8083 8084 8085; do
     if lsof -ti:$port > /dev/null 2>&1; then
         echo -e "${YELLOW}Port $port still in use, killing process...${NC}"
         lsof -ti:$port | xargs kill -9 2>/dev/null
