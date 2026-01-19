@@ -1,5 +1,6 @@
 package com.example.tracing.inventory;
 
+import io.micrometer.observation.annotation.Observed;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.amqp.core.ExchangeTypes;
@@ -8,8 +9,6 @@ import org.springframework.amqp.rabbit.annotation.Queue;
 import org.springframework.amqp.rabbit.annotation.QueueBinding;
 import org.springframework.amqp.rabbit.annotation.RabbitListener;
 import org.springframework.stereotype.Service;
-
-import io.micrometer.tracing.annotation.NewSpan;
 
 @Service
 public class OrderListener {
@@ -26,7 +25,7 @@ public class OrderListener {
             exchange = @Exchange(name = "orders.exchange", type = ExchangeTypes.TOPIC),
             key = "orders.created"
     ))
-    @NewSpan("inventory.update")
+    @Observed(name = "inventory.update", contextualName = "inventory-update-order")
     public void handleOrder(Order order) throws InterruptedException {
         log.info("Received order from RabbitMQ: {}", order.getOrderId());
 

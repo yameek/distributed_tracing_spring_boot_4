@@ -3,8 +3,7 @@ package com.example.tracing.cqrs.infrastructure.command;
 import io.micrometer.core.instrument.Counter;
 import io.micrometer.core.instrument.MeterRegistry;
 import io.micrometer.core.instrument.Timer;
-import io.micrometer.observation.Observation;
-import io.micrometer.observation.ObservationRegistry;
+import io.micrometer.observation.annotation.Observed;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Component;
 
@@ -20,15 +19,13 @@ import java.util.concurrent.ConcurrentHashMap;
 public class CommandBus {
     
     private final Map<Class<? extends Command>, CommandHandler<?, ?>> handlers = new ConcurrentHashMap<>();
-    private final ObservationRegistry observationRegistry;
     private final MeterRegistry meterRegistry;
     
     private final Counter commandSuccessCounter;
     private final Counter commandFailureCounter;
     private final Timer commandExecutionTimer;
     
-    public CommandBus(ObservationRegistry observationRegistry, MeterRegistry meterRegistry) {
-        this.observationRegistry = observationRegistry;
+    public CommandBus(MeterRegistry meterRegistry) {
         this.meterRegistry = meterRegistry;
         
         // Initialize metrics
@@ -62,46 +59,41 @@ public class CommandBus {
      * Dispatches a command to its handler with full tracing and metrics.
      */
     @SuppressWarnings("unchecked")
+    @Observed(name = "command.bus.dispatch", contextualName = "command-bus-dispatch")
     public <T extends Command, R> R dispatch(T command) {
         String commandName = command.getClass().getSimpleName();
         String commandId = command.getCommandId();
         
         log.info("Dispatching command: {} with ID: {}", commandName, commandId);
         
-        // Create observation for tracing
-        return Observation.createNotStarted("command.bus.dispatch", observationRegistry)
-                .lowCardinalityKeyValue("command.type", commandName)
-                .lowCardinalityKeyValue("command.id", commandId)
-                .observe(() -> {
-                    try {
-                        // Find handler
-                        CommandHandler<T, R> handler = (CommandHandler<T, R>) handlers.get(command.getClass());
-                        
-                        if (handler == null) {
-                            String errorMsg = "No handler registered for command: " + commandName;
-                            log.error(errorMsg);
-                            commandFailureCounter.increment();
-                            throw new IllegalStateException(errorMsg);
-                        }
-                        
-                        // Execute handler with timing
-                        R result = commandExecutionTimer.record(() -> {
-                            log.debug("Executing command handler: {} for command: {}", 
-                                    handler.getClass().getSimpleName(), commandName);
-                            return handler.handle(command);
-                        });
-                        
-                        commandSuccessCounter.increment();
-                        log.info("Successfully executed command: {} with ID: {}", commandName, commandId);
-                        
-                        return result;
-                        
-                    } catch (Exception e) {
-                        commandFailureCounter.increment();
-                        log.error("Failed to execute command: {} with ID: {}", commandName, commandId, e);
-                        throw new CommandExecutionException("Failed to execute command: " + commandName, e);
-                    }
-                });
+        try {
+            // Find handler
+            CommandHandler<T, R> handler = (CommandHandler<T, R>) handlers.get(command.getClass());
+            
+            if (handler == null) {
+                String errorMsg = "No handler registered for command: " + commandName;
+                log.error(errorMsg);
+                commandFailureCounter.increment();
+                throw new IllegalStateException(errorMsg);
+            }
+            
+            // Execute handler with timing
+            R result = commandExecutionTimer.record(() -> {
+                log.debug("Executing command handler: {} for command: {}", 
+                        handler.getClass().getSimpleName(), commandName);
+                return handler.handle(command);
+            });
+            
+            commandSuccessCounter.increment();
+            log.info("Successfully executed command: {} with ID: {}", commandName, commandId);
+            
+            return result;
+            
+        } catch (Exception e) {
+            commandFailureCounter.increment();
+            log.error("Failed to execute command: {} with ID: {}", commandName, commandId, e);
+            throw new CommandExecutionException("Failed to execute command: " + commandName, e);
+        }
     }
     
     /**

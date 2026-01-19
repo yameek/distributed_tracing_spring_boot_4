@@ -6,8 +6,7 @@ import org.springframework.graphql.data.method.annotation.Argument;
 import org.springframework.graphql.data.method.annotation.MutationMapping;
 import org.springframework.graphql.data.method.annotation.QueryMapping;
 import org.springframework.stereotype.Controller;
-import io.micrometer.tracing.annotation.NewSpan;
-import io.micrometer.tracing.annotation.SpanTag;
+import io.micrometer.observation.annotation.Observed;
 
 @Controller
 public class OrderController {
@@ -24,9 +23,9 @@ public class OrderController {
     }
 
     @MutationMapping
-    @NewSpan("graphql.createOrder")
-    public Order createOrder(@SpanTag("product.id") @Argument String productId, 
-                             @SpanTag("order.quantity") @Argument int quantity) {
+    @Observed(name = "graphql.createOrder", contextualName = "graphql-create-order")
+    public Order createOrder(@Argument String productId, 
+                             @Argument int quantity) {
         log.info("Received GraphQL mutation createOrder: {} x {}", quantity, productId);
         return orderClient.createOrder(productId, quantity);
     }

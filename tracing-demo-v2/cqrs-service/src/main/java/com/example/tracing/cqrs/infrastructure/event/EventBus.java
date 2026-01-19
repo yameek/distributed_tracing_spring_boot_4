@@ -3,8 +3,7 @@ package com.example.tracing.cqrs.infrastructure.event;
 import io.micrometer.core.instrument.Counter;
 import io.micrometer.core.instrument.MeterRegistry;
 import io.micrometer.core.instrument.Timer;
-import io.micrometer.observation.Observation;
-import io.micrometer.observation.ObservationRegistry;
+import io.micrometer.observation.annotation.Observed;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Component;
 
@@ -23,7 +22,6 @@ import java.util.concurrent.ConcurrentHashMap;
 public class EventBus {
     
     private final Map<Class<? extends DomainEvent>, List<EventHandler<?>>> handlers = new ConcurrentHashMap<>();
-    private final ObservationRegistry observationRegistry;
     private final MeterRegistry meterRegistry;
     
     private final Counter eventPublishedCounter;
@@ -31,8 +29,7 @@ public class EventBus {
     private final Counter eventHandlingFailureCounter;
     private final Timer eventHandlingTimer;
     
-    public EventBus(ObservationRegistry observationRegistry, MeterRegistry meterRegistry) {
-        this.observationRegistry = observationRegistry;
+    public EventBus(MeterRegistry meterRegistry) {
         this.meterRegistry = meterRegistry;
         
         // Initialize metrics
@@ -68,6 +65,7 @@ public class EventBus {
      * Publishes an event to all registered handlers with full tracing and metrics.
      */
     @SuppressWarnings("unchecked")
+    @Observed(name = "event.bus.publish", contextualName = "event-bus-publish")
     public <T extends DomainEvent> void publish(T event) {
         String eventType = event.getEventType();
         String eventId = event.getEventId();
@@ -76,58 +74,45 @@ public class EventBus {
         log.info("Publishing event: {} with ID: {} for aggregate: {}", eventType, eventId, aggregateId);
         eventPublishedCounter.increment();
         
-        // Create observation for tracing
-        Observation.createNotStarted("event.bus.publish", observationRegistry)
-                .lowCardinalityKeyValue("event.type", eventType)
-                .lowCardinalityKeyValue("event.id", eventId)
-                .lowCardinalityKeyValue("aggregate.id", aggregateId)
-                .observe(() -> {
-                    List<EventHandler<?>> eventHandlers = handlers.get(event.getClass());
-                    
-                    if (eventHandlers == null || eventHandlers.isEmpty()) {
-                        log.warn("No handlers registered for event: {}", eventType);
-                        return;
-                    }
-                    
-                    log.debug("Found {} handler(s) for event: {}", eventHandlers.size(), eventType);
-                    
-                    // Dispatch to all handlers
-                    for (EventHandler<?> handler : eventHandlers) {
-                        dispatchToHandler((EventHandler<T>) handler, event);
-                    }
-                });
+        List<EventHandler<?>> eventHandlers = handlers.get(event.getClass());
+        
+        if (eventHandlers == null || eventHandlers.isEmpty()) {
+            log.warn("No handlers registered for event: {}", eventType);
+            return;
+        }
+        
+        log.debug("Found {} handler(s) for event: {}", eventHandlers.size(), eventType);
+        
+        // Dispatch to all handlers
+        for (EventHandler<?> handler : eventHandlers) {
+            dispatchToHandler((EventHandler<T>) handler, event);
+        }
     }
     
     /**
      * Dispatches an event to a specific handler with tracing and error handling.
      */
+    @Observed(name = "event.handler.execute", contextualName = "event-handler-execute")
     private <T extends DomainEvent> void dispatchToHandler(EventHandler<T> handler, T event) {
         String handlerName = handler.getHandlerName();
         String eventType = event.getEventType();
         String eventId = event.getEventId();
         
-        // Create child observation for each handler
-        Observation.createNotStarted("event.handler.execute", observationRegistry)
-                .lowCardinalityKeyValue("handler.name", handlerName)
-                .lowCardinalityKeyValue("event.type", eventType)
-                .lowCardinalityKeyValue("event.id", eventId)
-                .observe(() -> {
-                    try {
-                        log.debug("Dispatching event: {} to handler: {}", eventType, handlerName);
-                        
-                        eventHandlingTimer.record(() -> {
-                            handler.handle(event);
-                        });
-                        
-                        eventHandledCounter.increment();
-                        log.info("Successfully handled event: {} by handler: {}", eventType, handlerName);
-                        
-                    } catch (Exception e) {
-                        eventHandlingFailureCounter.increment();
-                        log.error("Failed to handle event: {} with handler: {}", eventType, handlerName, e);
-                        // Continue to next handler even if this one fails
-                    }
-                });
+        try {
+            log.debug("Dispatching event: {} to handler: {}", eventType, handlerName);
+            
+            eventHandlingTimer.record(() -> {
+                handler.handle(event);
+            });
+            
+            eventHandledCounter.increment();
+            log.info("Successfully handled event: {} by handler: {}", eventType, handlerName);
+            
+        } catch (Exception e) {
+            eventHandlingFailureCounter.increment();
+            log.error("Failed to handle event: {} with handler: {}", eventType, handlerName, e);
+            // Continue to next handler even if this one fails
+        }
     }
     
     /**

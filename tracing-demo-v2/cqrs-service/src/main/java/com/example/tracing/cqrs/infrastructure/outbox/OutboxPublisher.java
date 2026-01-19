@@ -3,8 +3,7 @@ package com.example.tracing.cqrs.infrastructure.outbox;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import io.micrometer.core.instrument.Counter;
 import io.micrometer.core.instrument.MeterRegistry;
-import io.micrometer.observation.Observation;
-import io.micrometer.observation.ObservationRegistry;
+import io.micrometer.observation.annotation.Observed;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.amqp.rabbit.core.RabbitTemplate;
 import org.springframework.scheduling.annotation.Scheduled;
@@ -30,7 +29,6 @@ public class OutboxPublisher {
     private final OutboxEventRepository repository;
     private final RabbitTemplate rabbitTemplate;
     private final OutboxService outboxService;
-    private final ObservationRegistry observationRegistry;
     private final Counter eventsPublishedCounter;
     private final Counter eventsFailedCounter;
     
@@ -38,12 +36,10 @@ public class OutboxPublisher {
             OutboxEventRepository repository,
             RabbitTemplate rabbitTemplate,
             OutboxService outboxService,
-            ObservationRegistry observationRegistry,
             MeterRegistry meterRegistry) {
         this.repository = repository;
         this.rabbitTemplate = rabbitTemplate;
         this.outboxService = outboxService;
-        this.observationRegistry = observationRegistry;
         
         this.eventsPublishedCounter = Counter.builder("outbox.events.published")
                 .description("Number of events published from outbox")
@@ -60,21 +56,19 @@ public class OutboxPublisher {
      */
     @Scheduled(fixedDelay = 5000, initialDelay = 10000)
     @Transactional
+    @Observed(name = "outbox.poll", contextualName = "outbox-poll-pending")
     public void publishPendingEvents() {
         log.debug("Polling outbox for pending events");
         
-        Observation.createNotStarted("outbox.poll", observationRegistry)
-                .observe(() -> {
-                    List<OutboxEvent> pendingEvents = repository.findPendingEventsForProcessing();
-                    
-                    if (!pendingEvents.isEmpty()) {
-                        log.info("Found {} pending events to publish", pendingEvents.size());
-                        
-                        for (OutboxEvent event : pendingEvents) {
-                            publishEvent(event);
-                        }
-                    }
-                });
+        List<OutboxEvent> pendingEvents = repository.findPendingEventsForProcessing();
+        
+        if (!pendingEvents.isEmpty()) {
+            log.info("Found {} pending events to publish", pendingEvents.size());
+            
+            for (OutboxEvent event : pendingEvents) {
+                publishEvent(event);
+            }
+        }
     }
     
     /**
@@ -101,39 +95,34 @@ public class OutboxPublisher {
     /**
      * Publishes a single event to RabbitMQ.
      */
+    @Observed(name = "outbox.publish", contextualName = "outbox-publish-event")
     private void publishEvent(OutboxEvent event) {
         String eventType = event.getEventType();
         String eventId = event.getEventId();
         
         log.info("Publishing event from outbox: {} with ID: {}", eventType, eventId);
         
-        Observation.createNotStarted("outbox.publish", observationRegistry)
-                .lowCardinalityKeyValue("event.type", eventType)
-                .lowCardinalityKeyValue("event.id", eventId)
-                .lowCardinalityKeyValue("outbox.id", event.getId())
-                .observe(() -> {
-                    try {
-                        // Mark as processing
-                        event.setStatus(OutboxEvent.OutboxStatus.PROCESSING);
-                        repository.save(event);
-                        
-                        // Publish to RabbitMQ
-                        String routingKey = "event." + eventType.toLowerCase();
-                        rabbitTemplate.convertAndSend(EXCHANGE_NAME, routingKey, event.getPayload());
-                        
-                        // Mark as published
-                        outboxService.markAsPublished(event.getId());
-                        eventsPublishedCounter.increment();
-                        
-                        log.info("Successfully published event from outbox: {} with ID: {}", eventType, eventId);
-                        
-                    } catch (Exception e) {
-                        eventsFailedCounter.increment();
-                        String errorMessage = "Failed to publish event: " + e.getMessage();
-                        outboxService.markAsFailed(event.getId(), errorMessage);
-                        log.error("Failed to publish event from outbox: {} with ID: {}", eventType, eventId, e);
-                    }
-                });
+        try {
+            // Mark as processing
+            event.setStatus(OutboxEvent.OutboxStatus.PROCESSING);
+            repository.save(event);
+            
+            // Publish to RabbitMQ
+            String routingKey = "event." + eventType.toLowerCase();
+            rabbitTemplate.convertAndSend(EXCHANGE_NAME, routingKey, event.getPayload());
+            
+            // Mark as published
+            outboxService.markAsPublished(event.getId());
+            eventsPublishedCounter.increment();
+            
+            log.info("Successfully published event from outbox: {} with ID: {}", eventType, eventId);
+            
+        } catch (Exception e) {
+            eventsFailedCounter.increment();
+            String errorMessage = "Failed to publish event: " + e.getMessage();
+            outboxService.markAsFailed(event.getId(), errorMessage);
+            log.error("Failed to publish event from outbox: {} with ID: {}", eventType, eventId, e);
+        }
     }
     
     /**

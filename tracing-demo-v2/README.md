@@ -3,6 +3,14 @@
 A production-ready implementation of distributed tracing using Spring Boot 4.0.1, Java 25 LTS, Micrometer Tracing, OpenTelemetry, Tempo, and Loki.
 
 > ✅ **Migrated to Java 25 LTS** (January 2026)
+> 🆕 **Now using @Observed annotation** for cleaner, more maintainable tracing code
+
+## 🆕 Latest Updates
+
+- **@Observed Annotation Migration** - All services migrated from manual span creation to `@Observed` annotation
+  - 📖 [Migration Guide](./OBSERVED_ANNOTATION_MIGRATION_GUIDE.md) - Complete migration guide with examples
+  - ⚡ [Quick Reference](./OBSERVED_QUICK_REFERENCE.md) - Quick reference for developers
+  - 📊 [Migration Summary](./MIGRATION_SUMMARY.md) - What changed and why
 
 ## Documentation
 

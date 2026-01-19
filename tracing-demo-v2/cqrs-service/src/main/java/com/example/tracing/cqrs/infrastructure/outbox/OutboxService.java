@@ -4,8 +4,7 @@ import com.example.tracing.cqrs.infrastructure.event.DomainEvent;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import io.micrometer.core.instrument.Counter;
 import io.micrometer.core.instrument.MeterRegistry;
-import io.micrometer.observation.Observation;
-import io.micrometer.observation.ObservationRegistry;
+import io.micrometer.observation.annotation.Observed;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
@@ -20,18 +19,15 @@ public class OutboxService {
     
     private final OutboxEventRepository repository;
     private final ObjectMapper objectMapper;
-    private final ObservationRegistry observationRegistry;
     private final Counter eventStoredCounter;
     private final Counter eventStorageFailureCounter;
     
     public OutboxService(
             OutboxEventRepository repository,
             ObjectMapper objectMapper,
-            ObservationRegistry observationRegistry,
             MeterRegistry meterRegistry) {
         this.repository = repository;
         this.objectMapper = objectMapper;
-        this.observationRegistry = observationRegistry;
         
         this.eventStoredCounter = Counter.builder("outbox.event.stored")
                 .description("Number of events stored in outbox")
@@ -47,38 +43,34 @@ public class OutboxService {
      * This method should be called within the same transaction as the domain changes.
      */
     @Transactional
+    @Observed(name = "outbox.store", contextualName = "outbox-store-event")
     public void storeEvent(DomainEvent event) {
         String eventType = event.getEventType();
         String eventId = event.getEventId();
         
         log.info("Storing event in outbox: {} with ID: {}", eventType, eventId);
         
-        Observation.createNotStarted("outbox.store", observationRegistry)
-                .lowCardinalityKeyValue("event.type", eventType)
-                .lowCardinalityKeyValue("event.id", eventId)
-                .observe(() -> {
-                    try {
-                        String payload = objectMapper.writeValueAsString(event);
-                        
-                        OutboxEvent outboxEvent = OutboxEvent.builder()
-                                .eventId(eventId)
-                                .eventType(eventType)
-                                .aggregateId(event.getAggregateId())
-                                .payload(payload)
-                                .status(OutboxEvent.OutboxStatus.PENDING)
-                                .build();
-                        
-                        repository.save(outboxEvent);
-                        eventStoredCounter.increment();
-                        
-                        log.info("Successfully stored event in outbox: {} with ID: {}", eventType, eventId);
-                        
-                    } catch (Exception e) {
-                        eventStorageFailureCounter.increment();
-                        log.error("Failed to store event in outbox: {} with ID: {}", eventType, eventId, e);
-                        throw new OutboxStorageException("Failed to store event in outbox", e);
-                    }
-                });
+        try {
+            String payload = objectMapper.writeValueAsString(event);
+            
+            OutboxEvent outboxEvent = OutboxEvent.builder()
+                    .eventId(eventId)
+                    .eventType(eventType)
+                    .aggregateId(event.getAggregateId())
+                    .payload(payload)
+                    .status(OutboxEvent.OutboxStatus.PENDING)
+                    .build();
+            
+            repository.save(outboxEvent);
+            eventStoredCounter.increment();
+            
+            log.info("Successfully stored event in outbox: {} with ID: {}", eventType, eventId);
+            
+        } catch (Exception e) {
+            eventStorageFailureCounter.increment();
+            log.error("Failed to store event in outbox: {} with ID: {}", eventType, eventId, e);
+            throw new OutboxStorageException("Failed to store event in outbox", e);
+        }
     }
     
     /**

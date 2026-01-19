@@ -5,8 +5,7 @@ import org.slf4j.LoggerFactory;
 import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RestController;
-import io.micrometer.tracing.annotation.NewSpan;
-import io.micrometer.tracing.annotation.SpanTag;
+import io.micrometer.observation.annotation.Observed;
 
 import java.util.UUID;
 
@@ -23,7 +22,7 @@ public class OrderController {
     }
 
     @PostMapping("/orders")
-    @NewSpan("order.process")
+    @Observed(name = "order.process", contextualName = "order-process")
     public Order createOrder(@RequestBody CreateOrderRequest request) {
         String orderId = UUID.randomUUID().toString();
         log.info("Received REST request to create order: ID={}, Product={}", orderId, request.getProductId());
