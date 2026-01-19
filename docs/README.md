@@ -36,6 +36,7 @@ This directory contains all documentation for the distributed tracing demo proje
 | **[tracing-demo/tracing_quick_reference.md](tracing-demo/tracing_quick_reference.md)** | Quick reference for common patterns |
 | **[tracing-demo/tracing_trace_ids_explanation.md](tracing-demo/tracing_trace_ids_explanation.md)** | How trace IDs work |
 | **[tracing-demo/tracing_architecture_diagrams.md](tracing-demo/tracing_architecture_diagrams.md)** | Architecture diagrams |
+| **[tracing-demo-v2/README.md](tracing-demo-v2/README.md)** | 🆕 Complete V2 documentation index |
 
 ## Directory Structure
 
@@ -48,12 +49,21 @@ docs/
 ├── GRAFANA_GUIDE.md             # Grafana usage guide
 ├── FIX_HISTORY.md               # Troubleshooting history
 │
-├── tracing-demo/                # Demo-specific documentation
+├── tracing-demo/                # Original demo documentation
 │   ├── tracing_access_instructions.md
 │   ├── tracing_architecture_diagrams.md
 │   ├── tracing_quick_reference.md
 │   ├── tracing_trace_ids_explanation.md
 │   └── tracing_visualization_guide.md
+│
+├── tracing-demo-v2/             # 🆕 V2 comprehensive documentation
+│   ├── README.md                # V2 documentation index
+│   ├── Quick Start guides
+│   ├── Architecture & Design docs
+│   ├── Implementation guides
+│   ├── Migration & Updates
+│   ├── Testing documentation
+│   └── Examples & References
 │
 └── migration/                   # Migration documentation
     └── tracing_java_25_migration.md

@@ -25,7 +25,7 @@ management:
           enabled: true
           # Use gRPC instead of HTTP for better compatibility
           transport: grpc
-          # Tempo's OTLP gRPC endpoint
+          # OpenTelemetry Collector endpoint (collector forwards to backend)
           endpoint: http://localhost:4317
     metrics:
       export:

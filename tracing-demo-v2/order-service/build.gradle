@@ -1,0 +1,28 @@
+dependencies {
+    // Spring Boot Starters
+    implementation 'org.springframework.boot:spring-boot-starter-web'
+    implementation 'org.springframework.boot:spring-boot-starter-amqp'
+    implementation 'org.springframework.boot:spring-boot-starter-actuator'
+    implementation 'org.springframework.boot:spring-boot-starter-data-jpa'
+    
+    // Spring Boot 4 OpenTelemetry Starter - replaces manual tracing config
+    implementation 'org.springframework.boot:spring-boot-starter-opentelemetry'
+    
+    // H2 Database
+    runtimeOnly 'com.h2database:h2'
+    
+    // JSON Message Converter for RabbitMQ
+    implementation 'com.fasterxml.jackson.core:jackson-databind'
+    
+    // Logging
+    implementation 'com.github.loki4j:loki-logback-appender:1.4.2'
+    implementation 'net.logstash.logback:logstash-logback-encoder:8.0'
+    
+    // Testing
+    testImplementation 'org.springframework.amqp:spring-rabbit-test'
+}
+
+bootJar {
+    archiveBaseName = 'order-service'
+    archiveVersion = '0.0.1-SNAPSHOT'
+}

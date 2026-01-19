@@ -1,0 +1,28 @@
+dependencies {
+    // Spring Boot Starters
+    implementation 'org.springframework.boot:spring-boot-starter-web'
+    implementation 'org.springframework.boot:spring-boot-starter-amqp'
+    implementation 'org.springframework.boot:spring-boot-starter-actuator'
+    
+    // Spring Boot 4 OpenTelemetry Starter
+    implementation 'org.springframework.boot:spring-boot-starter-opentelemetry'
+    
+    // WebClient for HTTP calls
+    implementation 'org.springframework.boot:spring-boot-starter-webflux'
+    
+    // JSON Processing
+    implementation 'com.fasterxml.jackson.core:jackson-databind'
+    
+    // Lombok
+    compileOnly 'org.projectlombok:lombok'
+    annotationProcessor 'org.projectlombok:lombok'
+    
+    // Logging
+    implementation 'com.github.loki4j:loki-logback-appender:1.4.2'
+    implementation 'net.logstash.logback:logstash-logback-encoder:8.0'
+}
+
+bootJar {
+    archiveBaseName = 'orchestrator-service'
+    archiveVersion = '0.0.1-SNAPSHOT'
+}

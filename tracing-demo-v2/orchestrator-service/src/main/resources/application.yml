@@ -1,0 +1,57 @@
+spring:
+  application:
+    name: orchestrator-service
+  
+  rabbitmq:
+    host: localhost
+    port: 5672
+
+server:
+  port: 8085
+
+# CQRS Service endpoints
+cqrs:
+  service:
+    url: http://localhost:8084
+    rabbitmq:
+      exchange: cqrs.commands.exchange
+      routing-key: command.product
+
+management:
+  tracing:
+    enabled: true
+    sampling:
+      probability: 1.0
+  endpoints:
+    web:
+      exposure:
+        include: health, info, prometheus, metrics
+  # Spring Boot 4 OpenTelemetry configuration
+  opentelemetry:
+    tracing:
+      export:
+        otlp:
+          enabled: true
+          transport: grpc
+          endpoint: http://localhost:4317
+    metrics:
+      export:
+        otlp:
+          enabled: false
+    logging:
+      export:
+        otlp:
+          enabled: false
+  otlp:
+    metrics:
+      export:
+        enabled: false
+
+logging:
+  pattern:
+    level: "%5p [${spring.application.name:},%X{traceId:-},%X{spanId:-}]"
+  level:
+    com.example.tracing.orchestrator: INFO
+    org.springframework.amqp: WARN
+
+# Logging configuration is in logback-spring.xml for JSON format with trace IDs

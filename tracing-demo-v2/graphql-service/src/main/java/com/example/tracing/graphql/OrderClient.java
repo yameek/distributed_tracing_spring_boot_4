@@ -1,5 +1,6 @@
 package com.example.tracing.graphql;
 
+import io.micrometer.observation.annotation.Observed;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.stereotype.Service;
@@ -15,6 +16,7 @@ public class OrderClient {
         this.restTemplate = restTemplate;
     }
 
+    @Observed(name = "order.client.create", contextualName = "order-client-http-call")
     public Order createOrder(String productId, int quantity) {
         log.info("Sending order creation request to order-service for product: {}", productId);
         String url = "http://localhost:8081/orders";
