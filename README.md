@@ -72,6 +72,7 @@ docs/                     # Documentation
 - **[Visualization Guide](docs/tracing-demo/tracing_visualization_guide.md)** - Understanding trace visualizations
 
 ### Reference
+- **[Branch Guide](docs/BRANCH_GUIDE.md)** - 🌿 Understand different branches and their implementations
 - **[Technology Stack](docs/STACK.md)** - All technologies used
 - **[Fix History](docs/FIX_HISTORY.md)** - Common issues and solutions
 - **[Goal](docs/GOAL.md)** - What this project achieves
