@@ -1,0 +1,55 @@
+spring:
+  application:
+    name: grpc-service
+  grpc:
+    server:
+      port: 9090
+
+server:
+  port: 8086  # HTTP port for actuator endpoints
+
+management:
+  tracing:
+    enabled: true
+    sampling:
+      probability: 1.0
+  endpoints:
+    web:
+      exposure:
+        include: health, info, prometheus, metrics
+  # Spring Boot 4 OpenTelemetry configuration
+  opentelemetry:
+    tracing:
+      export:
+        otlp:
+          enabled: true
+          # Use gRPC for trace export to OpenTelemetry Collector
+          transport: grpc
+          # OpenTelemetry Collector endpoint (collector forwards to backend)
+          endpoint: http://localhost:4317
+    metrics:
+      export:
+        otlp:
+          # Disable metrics export - Tempo doesn't accept metrics via OTLP
+          # Use Prometheus endpoint instead at /actuator/prometheus
+          enabled: false
+    logging:
+      export:
+        otlp:
+          # Disable log export - we're using file-based logging
+          enabled: false
+  # Also disable the default OTLP metrics registry
+  otlp:
+    metrics:
+      export:
+        enabled: false
+
+logging:
+  pattern:
+    level: "%5p [${spring.application.name:},%X{traceId:-},%X{spanId:-}]"
+  level:
+    com.example.tracing.grpc: INFO
+    io.grpc: INFO
+    net.devh.boot.grpc: INFO
+
+# Logging configuration is in logback-spring.xml for JSON format with trace IDs

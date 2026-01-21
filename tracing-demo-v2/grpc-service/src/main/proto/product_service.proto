@@ -1,0 +1,62 @@
+syntax = "proto3";
+
+package com.example.tracing.grpc;
+
+option java_multiple_files = true;
+option java_package = "com.example.tracing.grpc.proto";
+option java_outer_classname = "ProductServiceProto";
+
+// Product Service definition
+service ProductService {
+  // Get product by ID
+  rpc GetProduct (GetProductRequest) returns (ProductResponse);
+  
+  // Create a new product
+  rpc CreateProduct (CreateProductRequest) returns (ProductResponse);
+  
+  // Update product price
+  rpc UpdateProductPrice (UpdateProductPriceRequest) returns (ProductResponse);
+  
+  // List all products
+  rpc ListProducts (ListProductsRequest) returns (ListProductsResponse);
+}
+
+// Request messages
+message GetProductRequest {
+  string product_id = 1;
+}
+
+message CreateProductRequest {
+  string name = 1;
+  string description = 2;
+  double price = 3;
+  int32 stock = 4;
+}
+
+message UpdateProductPriceRequest {
+  string product_id = 1;
+  double new_price = 2;
+}
+
+message ListProductsRequest {
+  int32 page = 1;
+  int32 page_size = 2;
+}
+
+// Response messages
+message ProductResponse {
+  string product_id = 1;
+  string name = 2;
+  string description = 3;
+  double price = 4;
+  int32 stock = 5;
+  string status = 6;
+  int64 created_at = 7;
+}
+
+message ListProductsResponse {
+  repeated ProductResponse products = 1;
+  int32 total = 2;
+  int32 page = 3;
+  int32 page_size = 4;
+}
