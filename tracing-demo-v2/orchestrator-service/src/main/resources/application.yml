@@ -34,11 +34,13 @@ management:
           enabled: true
           transport: grpc
           endpoint: http://localhost:4317
-    metrics:
+    # OTLP Logging export - correct path for Spring Boot 4
+    logging:
       export:
         otlp:
-          enabled: false
-    logging:
+          enabled: true
+          endpoint: http://localhost:4318/v1/logs
+    metrics:
       export:
         otlp:
           enabled: false

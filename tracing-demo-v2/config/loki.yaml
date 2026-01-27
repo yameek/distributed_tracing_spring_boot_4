@@ -16,6 +16,20 @@ common:
     kvstore:
       store: inmemory
 
+# Enable OTLP ingestion for logs from OTel Collector
+limits_config:
+  allow_structured_metadata: true
+  otlp_config:
+    resource_attributes:
+      attributes_config:
+        - action: index_label
+          attributes:
+            - service.name
+        - action: structured_metadata
+          attributes:
+            - service.instance.id
+            - telemetry.sdk.language
+
 query_range:
   results_cache:
     cache:

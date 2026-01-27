@@ -46,34 +46,19 @@
         </rollingPolicy>
     </appender>
     
-    <!-- Loki appender for centralized logging -->
-    <appender name="LOKI" class="com.github.loki4j.logback.Loki4jAppender">
-        <http>
-            <url>http://localhost:3100/loki/api/v1/push</url>
-        </http>
-        <format>
-            <label>
-                <pattern>service=${appName},level=%level</pattern>
-            </label>
-            <message>
-                <pattern>
-                    {
-                    "timestamp":"%d{ISO8601}",
-                    "level":"%level",
-                    "thread":"%thread",
-                    "logger":"%logger{36}",
-                    "message":"%message",
-                    "traceId":"%X{traceId:-}",
-                    "spanId":"%X{spanId:-}"
-                    }
-                </pattern>
-            </message>
-        </format>
+    <!-- OpenTelemetry Appender - sends logs via OTLP to OTel Collector -->
+    <!-- Logs flow: Service -> OTel Collector -> Loki (same pattern as traces -> Tempo) -->
+    <appender name="OTEL" class="io.opentelemetry.instrumentation.logback.appender.v1_0.OpenTelemetryAppender">
+        <captureExperimentalAttributes>true</captureExperimentalAttributes>
+        <captureCodeAttributes>true</captureCodeAttributes>
+        <captureMarkerAttribute>true</captureMarkerAttribute>
+        <captureKeyValuePairAttributes>true</captureKeyValuePairAttributes>
+        <captureMdcAttributes>traceId,spanId,parentSpanId</captureMdcAttributes>
     </appender>
     
     <root level="INFO">
         <appender-ref ref="CONSOLE"/>
         <appender-ref ref="FILE"/>
-        <appender-ref ref="LOKI"/>
+        <appender-ref ref="OTEL"/>
     </root>
 </configuration>

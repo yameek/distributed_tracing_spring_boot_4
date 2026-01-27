@@ -1,13 +1,13 @@
 # OpenTelemetry Collector Configuration
-# This collector acts as an intermediary between your services and the tracing backend
+# This collector acts as an intermediary between your services and the observability backends
 # Benefits:
-# - Vendor independence: Switch backends (Tempo, Jaeger, Zipkin) without changing service code
+# - Vendor independence: Switch backends (Tempo, Jaeger, Loki) without changing service code
 # - Centralized configuration: All export logic in one place
 # - Processing capabilities: Add sampling, filtering, enrichment as needed
-# - Multiple backends: Send traces to multiple destinations simultaneously
+# - Multiple backends: Send traces/logs to multiple destinations simultaneously
 
 receivers:
-  # OTLP receiver - accepts traces from your services
+  # OTLP receiver - accepts traces AND logs from your services
   otlp:
     protocols:
       grpc:
@@ -16,7 +16,7 @@ receivers:
         endpoint: 0.0.0.0:4318
 
 processors:
-  # Batch processor - batches spans for efficient export
+  # Batch processor - batches spans/logs for efficient export
   batch:
     timeout: 1s
     send_batch_size: 1024
@@ -26,12 +26,25 @@ processors:
     check_interval: 1s
     limit_mib: 512
     spike_limit_mib: 128
+  
+  # Resource processor - adds/modifies resource attributes
+  resource:
+    attributes:
+      - key: loki.resource.labels
+        value: service.name, service.namespace
+        action: insert
 
 exporters:
-  # Tempo exporter - currently configured for Tempo
-  # To switch backends, just add/modify exporters here
-  otlp:
+  # Tempo exporter - for traces
+  otlp/tempo:
     endpoint: tempo:4317
+    tls:
+      insecure: true
+  
+  # Loki exporter - for logs via OTLP HTTP
+  # Loki 3.0+ supports native OTLP ingestion at /otlp/v1/logs endpoint
+  otlphttp/loki:
+    endpoint: http://loki:3100/otlp
     tls:
       insecure: true
   
@@ -51,15 +64,26 @@ exporters:
 
 service:
   pipelines:
+    # Traces pipeline: Services -> OTel Collector -> Tempo
     traces:
       receivers: [otlp]
       processors: [memory_limiter, batch]
-      exporters: [otlp, debug]
-      # To send to multiple backends, add them here:
-      # exporters: [otlp, jaeger, debug]
+      exporters: [otlp/tempo, debug]
+    
+    # Logs pipeline: Services -> OTel Collector -> Loki
+    logs:
+      receivers: [otlp]
+      processors: [memory_limiter, resource, batch]
+      exporters: [otlphttp/loki, debug]
   
   telemetry:
     logs:
       level: info
     metrics:
       level: detailed
+      readers:
+        - pull:
+            exporter:
+              prometheus:
+                host: "0.0.0.0"
+                port: 8888

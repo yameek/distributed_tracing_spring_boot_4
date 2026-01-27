@@ -26,19 +26,20 @@ services:
       timeout: 5s
       retries: 5
 
-  # OpenTelemetry Collector - receives traces from services and forwards to backend
+  # OpenTelemetry Collector - receives traces AND logs from services and forwards to backends
   otel-collector:
     image: otel/opentelemetry-collector-contrib:latest
     command: ["--config=/etc/otel-collector-config.yaml"]
     volumes:
       - ./config/otel-collector-config.yaml:/etc/otel-collector-config.yaml
     ports:
-      - "4317:4317" # OTLP gRPC - services send traces here
+      - "4317:4317" # OTLP gRPC - services send traces/logs here
       - "4318:4318" # OTLP HTTP
       - "8888:8888" # Prometheus metrics for the collector itself
       - "8889:8889" # Prometheus exporter metrics
     depends_on:
       - tempo
+      - loki
 
   tempo:
     image: grafana/tempo:latest

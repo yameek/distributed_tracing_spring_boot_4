@@ -32,22 +32,18 @@ management:
       export:
         otlp:
           enabled: true
-          # Use gRPC instead of HTTP for better compatibility
           transport: grpc
-          # OpenTelemetry Collector endpoint (collector forwards to backend)
           endpoint: http://localhost:4317
-    metrics:
-      export:
-        otlp:
-          # Disable metrics export - Tempo doesn't accept metrics via OTLP
-          # Use Prometheus endpoint instead at /actuator/prometheus
-          enabled: false
+    # OTLP Logging export - correct path for Spring Boot 4
     logging:
       export:
         otlp:
-          # Disable log export - we're using file-based logging
+          enabled: true
+          endpoint: http://localhost:4318/v1/logs
+    metrics:
+      export:
+        otlp:
           enabled: false
-  # Also disable the default OTLP metrics registry
   otlp:
     metrics:
       export:

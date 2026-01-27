@@ -10,8 +10,8 @@ dependencies {
     // JSON Message Converter for RabbitMQ
     implementation 'com.fasterxml.jackson.core:jackson-databind'
     
-    // Logging
-    implementation 'com.github.loki4j:loki-logback-appender:1.4.2'
+    // Logging - OpenTelemetry Logback appender for OTLP log export
+    implementation 'io.opentelemetry.instrumentation:opentelemetry-logback-appender-1.0:2.24.0-alpha'
     implementation 'net.logstash.logback:logstash-logback-encoder:8.0'
     
     // Testing

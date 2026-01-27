@@ -20,7 +20,7 @@ if [ -f "$SCRIPT_DIR/stop_all.sh" ]; then
 fi
 
 # 1. Start Infrastructure
-echo -e "${GREEN}[1/5] Starting Docker Infrastructure (RabbitMQ, Tempo, Loki, Grafana)...${NC}"
+echo -e "${GREEN}[1/5] Starting Docker Infrastructure (RabbitMQ, Tempo, Loki, Grafana, OTel Collector)...${NC}"
 docker compose up -d
 sleep 5 # Wait for containers to warm up
 
@@ -46,9 +46,9 @@ start_service() {
 mkdir -p logs
 touch logs/graphql-service.log logs/order-service.log logs/inventory-service.log logs/notification-service.log logs/cqrs-service.log logs/orchestrator-service.log
 
-# Pre-build all services (download dependencies once to avoid concurrency issues)
-echo -e "${BLUE}Building services with Gradle (First run may take time)...${NC}"
-./gradlew build -x test > /dev/null 2>&1
+# Clean and build all services (ensures fresh build with latest changes)
+echo -e "${BLUE}Cleaning and building services with Gradle (First run may take time)...${NC}"
+./gradlew clean build -x test
 
 echo -e "${GREEN}[2/5] Starting Core Services...${NC}"
 start_service "graphql-service" 8080
