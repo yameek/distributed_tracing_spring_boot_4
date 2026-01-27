@@ -42,6 +42,7 @@ subprojects {
     dependencyManagement {
         imports {
             mavenBom "org.springframework.boot:spring-boot-dependencies:4.0.1"
+            mavenBom "org.springframework.grpc:spring-grpc-dependencies:1.0.0"
         }
     }
     
