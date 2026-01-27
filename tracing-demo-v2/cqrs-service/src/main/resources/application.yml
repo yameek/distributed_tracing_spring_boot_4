@@ -7,7 +7,7 @@ spring:
     port: 5672
   
   datasource:
-    url: jdbc:postgresql://localhost:5432/cqrs_db
+    url: jdbc:postgresql://localhost:5433/cqrs_db
     username: postgres
     password: postgres
     driver-class-name: org.postgresql.Driver
