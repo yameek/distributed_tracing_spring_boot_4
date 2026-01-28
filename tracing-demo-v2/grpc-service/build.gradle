@@ -1,0 +1,58 @@
+plugins {
+    id 'com.google.protobuf' version '0.9.4'
+}
+
+dependencies {
+    // Spring Boot Starters
+    implementation 'org.springframework.boot:spring-boot-starter-web'
+    implementation 'org.springframework.boot:spring-boot-starter-actuator'
+    
+    // Spring Boot 4 OpenTelemetry Starter
+    implementation 'org.springframework.boot:spring-boot-starter-opentelemetry'
+    
+    // Spring gRPC (official Spring project, compatible with Spring Boot 4.x)
+    // Version is managed by spring-grpc-dependencies BOM in root build.gradle
+    implementation 'org.springframework.grpc:spring-grpc-spring-boot-starter'
+    
+    // gRPC dependencies (required by Spring gRPC)
+    implementation 'io.grpc:grpc-protobuf:1.60.0'
+    implementation 'io.grpc:grpc-stub:1.60.0'
+    implementation 'io.grpc:grpc-netty-shaded:1.60.0'
+    
+    // Protobuf
+    implementation 'com.google.protobuf:protobuf-java:3.25.1'
+    
+    // Logging
+    implementation 'com.github.loki4j:loki-logback-appender:1.4.2'
+    implementation 'net.logstash.logback:logstash-logback-encoder:8.0'
+}
+
+protobuf {
+    protoc {
+        artifact = "com.google.protobuf:protoc:3.25.1"
+    }
+    plugins {
+        grpc {
+            artifact = "io.grpc:protoc-gen-grpc-java:1.60.0"
+        }
+    }
+    generateProtoTasks {
+        all()*.plugins {
+            grpc {}
+        }
+    }
+}
+
+sourceSets {
+    main {
+        java {
+            srcDirs 'build/generated/source/proto/main/grpc'
+            srcDirs 'build/generated/source/proto/main/java'
+        }
+    }
+}
+
+bootJar {
+    archiveBaseName = 'grpc-service'
+    archiveVersion = '0.0.1-SNAPSHOT'
+}
